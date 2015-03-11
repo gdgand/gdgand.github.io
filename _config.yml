@@ -1,0 +1,8 @@
+# Site settings
+title: GDG Korea Android 블로그
+baseurl: "" # the subpath of your site, e.g. /blog/
+url: "http://gdgand.github.io" # the base hostname & protocol for your site
+
+# Build settings
+markdown: redcarpet
+highlighter: true
