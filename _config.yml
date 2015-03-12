@@ -5,4 +5,4 @@ url: "http://gdgand.github.io" # the base hostname & protocol for your site
 
 # Build settings
 markdown: redcarpet
-highlighter: true
+pygments: true
