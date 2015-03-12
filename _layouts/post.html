@@ -2,14 +2,21 @@
 layout: default
 ---
 <div class="post">
-
   <header class="post-header">
     <h1 class="post-title">{{ page.title }}</h1>
     <p class="post-meta">{{ page.date | date: "%b %-d, %Y" }}{% if page.author %} • {{ page.author }}{% endif %}{% if page.meta %} • {{ page.meta }}{% endif %}</p>
   </header>
-
+  <div id="fb-root"></div>
+  <script>(function(d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) return;
+    js = d.createElement(s); js.id = id;
+    js.src = "//connect.facebook.net/ko_KR/sdk.js#xfbml=1&appId=1406618779646333&version=v2.0";
+    fjs.parentNode.insertBefore(js, fjs);
+  }(document, 'script', 'facebook-jssdk'));</script>
   <article class="post-content">
     {{ content }}
+    <div class="fb-comments" data-href="http://developers.facebook.com/docs/plugins/comments/" data-numposts="5" data-width="100%" data-colorscheme="light"></div>
   </article>
 
 </div>
