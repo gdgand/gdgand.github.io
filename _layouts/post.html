@@ -16,7 +16,7 @@ layout: default
   }(document, 'script', 'facebook-jssdk'));</script>
   <article class="post-content">
     {{ content }}
-    <div class="fb-comments" data-href="http://developers.facebook.com/docs/plugins/comments/" data-numposts="5" data-width="100%" data-colorscheme="light"></div>
+    <div class="fb-comments" data-href="{{ site.url }}{{ page.url }}" data-numposts="5" data-width="100%" data-colorscheme="light"></div>
   </article>
 
 </div>
