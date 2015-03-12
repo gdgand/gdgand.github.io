@@ -25,10 +25,10 @@ categories: lollipop
 
 JobScheduler API는 사용자 수준의 클래스와 안드로이드 서비스로 구성돼 있다. 롤리팝 장비가 연결된 PC에서 <리스트 1>의 커맨드를 입력하면 JobScheduler의 안드로이드 서비스를 확인할 수 있다.
 
-````
+{% highlight bash %}
 $ adb shell service list | grep jobscheduler
 25  jobscheduler: [android.app.job.IJobScheduler]
-````
+{% endhighlight %}
 
 <리스트 1> 안드로이드 서비스 리스트에서 `jobscheduler` 추가를 확인
 
@@ -40,22 +40,24 @@ JobScheduler API는 `JobInfo`와 `JobService` 2개 객체로 구성돼 있다.
 
 직접 작업을 정의하고 수행해보자. <리스트 2>는 와이파이 네트워크가 연결돼 있으면서 충전이 진행되는 안전한 환경에서만 `MicrosoftwareService` 서비스를 수행하도록 한 코드다. 적절한 주기와 데드라인도 설정했다.
 
-````
-JobInfo job = new JobInfo.Builder(JOB_ID, new ComponentName(this, MicroSoftwareService.class))
-        .setRequiredNetworksCapabilities(JobInfo.NETWORK_TYPE_UNMETERED)
-        .setPeriodic(15 * DateUtils.HOURS_IN_MILLIS)
-        .setRequiresCharging(true)
-        .setOverrideDeadline(3600000)
-        .build();
+{% highlight java %}
+JobInfo job = new JobInfo.Builder(
+    JOB_ID, new ComponentName(this, MicroSoftwareService.class))
+    .setRequiredNetworksCapabilities(JobInfo.NETWORK_TYPE_UNMETERED)
+    .setPeriodic(15 * DateUtils.HOURS_IN_MILLIS)
+    .setRequiresCharging(true)
+    .setOverrideDeadline(3600000)
+    .build();
 
-JobService mJobService = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+JobService mJobService =
+    (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
 mJobService.scheduleJob(job);
-````
+{% endhighlight %}
 
 <리스트 2> JobScheduler API 사용
 
 
-더 상세한 `JobInfo` 파라미터를 알고 싶으면 JobInfo.Builder (https://developer.android.com/reference/android/app/job/JobInfo.Builder.html)를 참고하자.
+더 상세한 `JobInfo` 파라미터를 알고 싶으면 [JobInfo.Builder](https://developer.android.com/reference/android/app/job/JobInfo.Builder.html)를 참고하자.
 
 
 ### JobService 확장하기
@@ -64,19 +66,20 @@ mJobService.scheduleJob(job);
 
 `JobService`의 확장을 위해서 <리스트 3>과 같이 먼저 `AndroidManifest.xml`에 새로운 서비스를 등록해야 한다.
 
-````
+
+{% highlight xml %}
  <service
  android:name="kr.co.imaso.MasoJobService"
  android:permission="android.permission.BIND_JOB_SERVICE"
  android:exported="true" />
-````
+{% endhighlight %}
 
 <리스트 3> `AndroidManifest.xml` 등록
 
 
 <리스트 4>의 `onStartJob`은 작업이 시작될 때 호출되며 별도로 수행할 작업이 등록되는 곳이다. `onStopJob`은 작업이 끝날 때 호출되는 곳이다. 반환 값 true는 오버라이딩이 됐고 커스터마이징된 작업이 수행됐음을 의미한다. `onStartJob`이 리턴되기 전에 추가적으로 해야할 일을 수행하자.
 
-````
+{% highlight java %}
 public class MasoJobService extends JobService {
 
     @Override
@@ -90,8 +93,7 @@ public class MasoJobService extends JobService {
         return false;
     }
 }
-
-````
+{% endhighlight %}
 
 <리스트 4> 확장된 `JobService`, `MasoJobService`
 
@@ -100,40 +102,42 @@ public class MasoJobService extends JobService {
 
 애플리케이션이 수행된 후 배터리의 상황은 계속 변화한다. 안드로이드 롤리팝은 배터리 상황 개괄을 확인할 수 있는 명령 `dumpsys batterystats`를 제공한다.
 
-````
+{% highlight bash %}
 $ adb shell dumpsys batterystats —charged kr.co.imaso.MasoActivity
-````
+{% endhighlight %}
 
 <리스트 5> `kr.co.imaso.MasoActivity` 패키지 배터리 상황 확인
 
 
 조금 더 상세한 배터리 소모를 확인하기 위해 버그리포트를 출력할 수도 있다. 버그리포트를 출력하기 위해서는 <리스트 6>과 같은 몇 가지 설정 절차가 필요하다.
 
-````
+{% highlight bash %}
 $ adb shell dumpsys batterystats --enable full-wake-history
 Enabled: full-wake-history
+{% endhighlight %}
 
+{% highlight bash %}
 $ adb shell dumpsys batterystats --reset
 Battery stats reset.
-````
+{% endhighlight %}
 
 <리스트 6> 전체 웨이크 히스토리를 기록하도록 환경 설정
 
 
 분석하고 싶은 앱을 사용한 후 <리스트 7>의 커맨드를 입력해 버그리포트를 추출한다.
 
-````
+{% highlight bash %}
 $ adb bugreport > bugreport.txt
-````
+{% endhighlight %}
 
 <리스트 7> 버그리포트를 통해 웨이크 히스토리를 추출
 
 
-추출된 버그리포트의 분석을 위해 구글이 공개한 'Battery Historian(https://github.com/google/battery-historian)'을 사용한다. 리포지토리에서 historian.py를 다운로드 받아 적절한 곳에 설치한 후 <리스트 8>의 커맨드를 입력한다.
+추출된 버그리포트의 분석을 위해 구글이 공개한 [Battery Historian](https://github.com/google/battery-historian)을 사용한다. 리포지토리에서 historian.py를 다운로드 받아 적절한 곳에 설치한 후 <리스트 8>의 커맨드를 입력한다.
 
-````
+{% highlight bash %}
 python historian.py bugreport.txt > bugreport.html 
-````
+{% endhighlight %}
 
 <리스트 8> Battery Historian을 사용하여 HTML 리포트를 생성
 
@@ -172,19 +176,19 @@ python historian.py bugreport.txt > bugreport.html
  * `setPriority()` - 노티피케이션의 우선 순위를 변경해 중요도에 따라 정보를 분리할 수 있다. `PRIORITY_MAX`와 `PRIORITY_HIGH`의 경우 작게 떠 있는 화면으로 나타나며 동시에 소리를 내거나 진동을 울리게 된다.
  * `addPerson()` - 노티피케이션의 대상을 한 사람 이상 설정할 수 있다. 특정 사람, 또는 여러 사람에게 중요한 노티피케이션을 보낼 수 있다.
 
-카테고리와 우선순위에 대한 자세한 내용은 Notification 항목(http://developer.android.com/reference/android/app/Notification.html)을 참고하자.
+카테고리와 우선순위에 대한 자세한 내용은 [Notification 항목](http://developer.android.com/reference/android/app/Notification.html)을 참고하자.
 
 
 ### 단아한 아이콘
 
 롤리팝에서는 노티피케이션 아이콘의 정책도 변경됐다. 스몰 아이콘의 색상을 흰색과 투명색만 쓸 수 있는 제약이 생겼다. 현재는 애플리케이션의 타겟 버전과 단말기의 환경에 따라 다르게 보이지만 롤리팝 이후의 환경을 고려할 때 스몰 아이콘은 흰색과 투명색으로만 디자인 하는 것이 적절하다. 롤리팝의 스몰 아이콘은 `setColor`를 호출해 배경 색상을 정할 수 있으니 단색 아이콘과 배경 색상의 조화를 고려하는 것이 좋다(<리스트 9> 참고).
 
-````
+{% highlight java %}
 NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
 int color = getResources().getColor(R.color.imaso);
 builder.setColor(color);
 Notification notif = builder.build();
-````
+{% endhighlight %}
 
 <리스트 9> 배경 색상이 등록된 노티피케이션
 
@@ -204,41 +208,43 @@ dependencies {
 
 `RemoteControlClient`가 폐기됨에 따라 음악 재생 앱 등은 노티피케이션 변경이 요구된다. <리스트 11>처럼 노티피케이션 스타일 `Notification.MediaStyle`을 생성하고 `Notification.Builder`의 스타일로 등록해 이용한다.
 
-````
+{% highlight java %}
 Notification.Builder builder = new Notification.Builder(this)
     .setSmallIcon(R.drawable.ic_launcher)
     .setContentTitle("마이크로소프트웨어")
     .setContentText("안드로이드 롤리팝")
     .setDeleteIntent(pendingIntent)
     .setStyle(new Notification.MediaStyle());
-````
+{% endhighlight %}
 
 <리스트 11> `MediaStyle` 형식의 노티피케이션
 
 
 <리스트 12>과 같이 `MediaSessionManager` 서비스를 얻은 후 세션을 만들고, 그 세션으로부터 토큰을 받아와 미디어 컨트롤에 설정한다.
 
-````
-mManager = (MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);
+{% highlight java %}
+mManager =
+    (MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);
 mSession = mManager.createSession("microsoftware session");
 mController = MediaController.fromToken(mSession.getSessionToken());
-````
+{% endhighlight %}
 
 <리스트 12> `MediaController` 환경 설정
 
 
 세션의 `TransportControlsCallback`을 등록하고, 각 상황에 따라 다른 노티피케이션을 생성하도록 `onPlay`, `onPause` 등의 메소드를 오버라이드한다. <리스트 13>은 콜백을 등록하는 과정과 스켈레톤을 대략적으로 보여준다. 오버라이딩할 메소드마다 개별적으로 노티피케이션을 설정하고 띄워야 한다. 예를 들어 `onPlay` 메소드는 재생과 관련된 노티피케이션을 띄워야 한다.
 
-````
-mSession.addTransportControlsCallback(new MediaSession.TransportControlsCallback() {
-    @Override
-    public void onPlay() {}
+{% highlight java %}
+mSession.addTransportControlsCallback(
+    new MediaSession.TransportControlsCallback() {
+        @Override
+        public void onPlay() {}
 
-    @Override
-    public void onPause() {}
-    ...
-}
-````
+        @Override
+        public void onPause() {}
+        ...
+    });
+{% endhighlight %}
 
 <리스트 13> `TransportControlsCallback`의 개괄과 등록 과정
 
@@ -257,20 +263,20 @@ mSession.addTransportControlsCallback(new MediaSession.TransportControlsCallback
 
 새로운 도큐먼트를 생성하기 위해서는 <리스트 14> 처럼  `android.content.Intent.FLAG_ACTIVITY_NEW_DOCUMENT` 플래그를 포함한 액티비티를 호출한다.
 
-````
+{% highlight java %}
 Intent intent = new Intent(this, MicroSoftware.class);
 intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
 startActivity(intent);
-````
+{% endhighlight %}
 
 <리스트 14> 도큐먼트를 오버뷰에 추가하기 위해 `FLAG_ACTIVITY_NEW_DOCUMENT` 플래그를 사용
 
 
 웹사이트 문서도 오버뷰에 대응할 수 있다. 웹 문서에 <리스트 15>와 같이 메타 데이터 `theme-color`를 설정하면 오버뷰 문서 속성으로 테마 색이 등록된다.
 
-````
+{% highlight xml %}
 <meta name="theme-color" content="#3FFFB5">
-````
+{% endhighlight %}
 
 <리스트 15> 오버뷰를 위한 메타데이터 적용 웹페이지
 
@@ -286,16 +292,16 @@ startActivity(intent);
 <그림 5> 달빅과 ART의 차이. 달빅은 DEX 파일에서 최적화된 Odex를 얻고 ART는 실행파일 ELF를 얻는다.
 
 
-새로운 방식이 적용됐기 때문에 앱에 따라 문제가 발생할 수 있다. AOT와 과련해서는 안드로이드 플랫폼과 관련된 이슈가 많기 때문에 안드로이드 이슈 리스트(https://code.google.com/p/android/issues/list)를 참조하며 문제를 해결하자.
+새로운 방식이 적용됐기 때문에 앱에 따라 문제가 발생할 수 있다. AOT와 과련해서는 안드로이드 플랫폼과 관련된 이슈가 많기 때문에 [안드로이드 이슈 리스트](https://code.google.com/p/android/issues/list)를 참조하며 문제를 해결하자.
 
 
 ### 성급한 GC 최적화
 
 GC의 구조가 변경됐기 때문에 `GC_FOR_ALLOC` 이벤트가 발생하는 빈도를 줄이기 위해 명시적으로 `System.gc()`를 호출할 필요가 없어졌다. 현재 환경이 달빅이 아닌 ART인 것을 환영하기 위해 <리스트 16>의 커맨드를 이용해서 버전 정보를 얻는다.
 
-````
+{% highlight java %}
 System.getProperty("java.vm.version")
-````
+{% endhighlight %}
 
 <리스트 16> ART 환경 확인
 
@@ -307,16 +313,16 @@ System.getProperty("java.vm.version")
 
 ART의 채택에 따라 기존에 잘 동작하던 JNI 앱의 동작에 문제가 생길 수 있다. JNI의 동작에 문제가 있는 경우 안드로이드에 포함된 CheckJNI 툴이 도움이 된다.
 
-````
+{% highlight bash %}
 $ adb shell setprop debug.checkjni 1
-````
+{% endhighlight %}
 
 <리스트 17> JNI 디버깅 모드 활성화
 
 
 환경이 설정된 후 JNI 코드가 포함된 앱을 수행할 때 시스템은 종종 <리스트 18>과 같이 경고나 에러 메시지를 출력한다.
 
-````
+{% highlight bash %}
 W JNI WARNING: method declared to return 'Ljava/lang/String;' returned '[B'
 W              failed in LJniTest;.exampleJniBug
 I "main" prio=5 tid=1 RUNNABLE
@@ -328,7 +334,7 @@ I   at JniTest.main(JniTest.java:11)
 I   at dalvik.system.NativeStart.main(Native Method)
 I
 E VM aborting
-````
+{% endhighlight %}
 
 <리스트 18> 향상된 디버깅 메시지
 
@@ -348,10 +354,10 @@ E VM aborting
 
 ## 중복된 커스텀 퍼미션 선언 문제
 
-````
+{% highlight xml %}
 <permission android:name= "com.example.gcm.permission.C2D_MESSAGE"
   android:protectionLevel="signature" />
-````
+{% endhighlight %}
 
 <리스트 19> 커스텀 퍼미션의 보안 레벨은 인증키를 기준으로 한다.
 
@@ -367,20 +373,20 @@ E VM aborting
 
 서비스 바인드를 할 때 명시적인 인텐트만 가능하도록 바뀌었다. <리스트 20>과 같이 암묵적인 바인드를 요청할 경우에는 실행시간 예외가 발생한다.
 
-````
+{% highlight java %}
 Intent intent = new Intent(MICROSOFTWARE_BINDING);
 bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
-````
+{% endhighlight %}
 
 <리스트 20> 에러가 발생하는 암묵적 서비스 바인딩
 
 
 롤리팝에서 제대로 된 바인드는 <리스트 21>과 같다.
 
-````
+{% highlight java %}
 Intent intent = new Intent(this, MicroSoftwareService.class);
 bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
-````
+{% endhighlight %}
 
 <리스트 21> 롤리팝에서 권장하는 명시적 서비스 바인딩
 
@@ -402,13 +408,13 @@ bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 
 다양한 안드로이드 버전에서 머터리얼 디자인을 사용할 수 있도록 `Theme.AppCompat`를 확장한 경우 `colorPrimary`, `colorPrimaryDark`, `colorAccent` 등의 색상을 설정해야 한다. `Theme.AppCompat`를 위한 색상 설정에는 `android:` 접두어가 붙지 않는다.
 
-````
+{% highlight xml %}
 <style name="Theme.MyTheme" parent="Theme.AppCompat.Light">
     <item name="colorPrimary">@color/material_blue_500</item>
     <item name="colorPrimaryDark">@color/material_blue_700</item>
     <item name="colorAccent">@color/material_green_A200</item>
 </style>
-````
+{% endhighlight %}
 
 <리스트 22> 다양한 안드로이드 버전을 위한 테마 Theme.AppCompat의 확장
 
@@ -436,7 +442,7 @@ dependencies {
 
 `ActionBarActivity`의 레이아웃에 `Toolbar`를 추가한다.
 
-````
+{% highlight xml %}
 <android.support.v7.widget.Toolbar
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/toolbar"
@@ -444,7 +450,7 @@ dependencies {
     android:layout_width="match_parent"
     android:minHeight="?attr/actionBarSize"
     android:background="?attr/colorPrimary" />
-````
+{% endhighlight %}
 
 <리스트 24> 액션바와 달리 레이아웃 요소의 하나인 툴바
 
@@ -456,7 +462,7 @@ dependencies {
 
 액션바처럼 툴바를 연결할 때는 `setSupportActionBar` 메소드를 이용한다.
 
-````
+{% highlight java %}
 @Override
 public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -465,14 +471,14 @@ public void onCreate(Bundle savedInstanceState) {
     Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
     setSupportActionBar(toolbar);
 }
-````
+{% endhighlight %}
 
 <리스트 25> `setSupportActionBar`를 이용한 툴바의 사용
 
 
 툴바를 활용하는 또 다른 방법은 툴바의 `setOnMenuItemClickListener`와 `inflateMenu`를 이용하는 것이다.
 
-````
+{% highlight java %}
 @Override
 public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -482,18 +488,18 @@ public void onCreate(Bundle savedInstanceState) {
 
     // Set an OnMenuItemClickListener to handle menu item clicks
     toolbar.setOnMenuItemClickListener(
-            new Toolbar.OnMenuItemClickListener() {
-                @Override
-                public boolean onMenuItemClick(MenuItem item) {
-                    // Handle the menu item
-                    return true;
-                }
-    });
+        new Toolbar.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                // Handle the menu item
+                return true;
+            }
+        });
 
     // Inflate a menu to be displayed in the toolbar
     toolbar.inflateMenu(R.menu.microsoftware_menu);
 }
-````
+{% endhighlight %}
 
 <리스트 26> 액션바와 상관없는 독자적인 툴바의 사용
 
@@ -506,7 +512,7 @@ public void onCreate(Bundle savedInstanceState) {
 
 롤리팝의 네비게이션 드로어는 화면 전체를 가리는 형태다. 이렇게 드로어가 화면 전체를 가리기 위해서는 <리스트 27>과 같이 레이아웃에서 `DrawLayout`이 포함되도록 바꿔야 한다.
 
-````
+{% highlight xml %}
 <android.support.v4.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
@@ -537,7 +543,7 @@ public void onCreate(Bundle savedInstanceState) {
         android:fitsSystemWindows="true" />
 
 </android.support.v4.widget.DrawerLayout>
-````
+{% endhighlight %}
 
 <리스트 27> 머터리얼 디자인에 맞춰 변경된 드로어 레이아웃
 
@@ -549,6 +555,6 @@ public void onCreate(Bundle savedInstanceState) {
 
 롤리팝에서 변화된 많은 부분을 한 자리에서 설명한다는 것은 매우 어려운 일이다. 또 이 글에서 설명하지 않은 변화들이 앞으로의 안드로이드 개발에 많은 영향을 끼칠 것이다. 개발에 있어 장애가 있을 수 있겠지만, 다른 측면에서 본다면 새로운 기능과 디자인에 의한 여러 가지 긍정적인 변화도 기대해 볼 수 있다. 안드로이드 롤리팝에 대한 다양한 경험을 서로 공유하며 조금 더 달콤한 안드로이드를 만나봤으면 하는 바람이다. 다음은 롤리팝에 대한 정보가 공유되는 사이트들이다.
 
- * GDG 코리아 안드로이드 - https://plus.google.com/communities/100903743067544956282
- * 구글 개발자 코리아 블로그 - http://googledevkr.blogspot.kr/
- * 페이스북 커뮤니티 안로이드 팁팁팁 - https://www.facebook.com/groups/junsle
+ * [GDG 코리아 안드로이드](https://plus.google.com/communities/100903743067544956282)
+ * [구글 개발자 코리아 블로](http://googledevkr.blogspot.kr/)
+ * [페이스북 커뮤니티 안로이드 팁팁팁](https://www.facebook.com/groups/junsle)
