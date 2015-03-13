@@ -193,7 +193,7 @@ Notification notif = builder.build();
 <리스트 9> 배경 색상이 등록된 노티피케이션
 
 
-`NotificationCompat`은 구 버전 단말에서도 사용할 수 있도록 호환성 라이브러리에 추가된 노티피케이션 객체이다. 호환성 라이브러리를 사용하기 위해서는 `build.gralde` 파일에 <리스트 10>에 기술된 의존성을 추가해야 한다.
+`NotificationCompat`은 구 버전 단말에서도 사용할 수 있도록 호환성 라이브러리에 추가된 노티피케이션 객체이다. 호환성 라이브러리를 사용하기 위해서는 `build.gradle` 파일에 <리스트 10>에 기술된 의존성을 추가해야 한다.
 
 ````
 dependencies {
