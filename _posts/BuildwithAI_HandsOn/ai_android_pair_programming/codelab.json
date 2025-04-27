@@ -1,0 +1,24 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-49880327-14",
+  "updated": "2025-04-27T02:23:31Z",
+  "id": "ai_android_pair_programming",
+  "duration": 49,
+  "title": "Build with AI on Android Session 2 - AI 시대의 안드로이드 개발",
+  "authors": "GDG Korea Android",
+  "summary": "이 Hands-on에서는 AI를 실제 안드로이드 개발과정에 어떻게 녹일 수 있을지 체험할 수 있습니다. 더 구조적이고 명시적인 프롬프트를 작성하기 위한 인수 조건, Android Studio에서 제공하는 여러 앱 개발 생산성 향상을 위한 Gemini 기능 등을 소개합니다.",
+  "source": "1nk01uD6DJxdamJJ79pCWnLteKqbRR8f0rJq9xvfO_aA",
+  "theme": "android",
+  "status": [
+    "published"
+  ],
+  "category": [
+    "android"
+  ],
+  "tags": [
+    "buildwithaionandroid2025"
+  ],
+  "url": "ai_android_pair_programming"
+}
