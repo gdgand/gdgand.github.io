@@ -8,9 +8,13 @@ layout: default
 
   <ul class="post-list">
     {% for post in site.posts %}
-    <p>Build with AI on Android Hands-on 세션 링크</p>
-    <a href="/mediapipe_face_stylizer_android/index.html">Build with AI on Android Session 1 - MediaPipe 활용하기</a>
-    <a href="/ai_android_pair_programming/index.html">Build with AI on Android Session 2 - AI 시대의 안드로이드 개발</a>
+      <li>
+        <span class="post-meta">{{ post.date | date: "%b %-d, %Y" }}</span>
+
+        <h2>
+          <a class="post-link" href="{{ post.url | prepend: site.baseurl }}">{{ post.title }}</a>
+        </h2>
+      </li>
     {% endfor %}
   </ul>
 
