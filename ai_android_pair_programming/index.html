@@ -1,0 +1,244 @@
+
+<!doctype html>
+
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#4F7DC9">
+  <meta charset="UTF-8">
+  <title>Build with AI on Android Session 2 - AI 시대의 안드로이드 개발</title>
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro:400|Roboto:400,300,400italic,500,700|Roboto+Mono">
+  <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://storage.googleapis.com/claat-public/codelab-elements.css">
+  <style>
+    .success {
+      color: #1e8e3e;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <google-codelab-analytics gaid="UA-49880327-14" ga4id=""></google-codelab-analytics>
+  <google-codelab codelab-gaid=""
+                  codelab-ga4id=""
+                  id="ai_android_pair_programming"
+                  title="Build with AI on Android Session 2 - AI 시대의 안드로이드 개발"
+                  environment="web"
+                  feedback-link="">
+    
+      <google-codelab-step label="사전 준비 및 소개" duration="3">
+        <p><strong>Last Updated:</strong> 2025-04-27</p>
+<h2 is-upgraded><strong>사전 준비</strong></h2>
+<p>사전에 안내해 드린대로 <strong>Android Studio Narwhal | 2025.1.1</strong>을 아직 설치하지 않으셨다면, 다음 설치 가이드를 참고하여 설치해 주세요! </p>
+<p><a href="https://github.com/gdgand/BuildWithAI2025" target="_blank"><paper-button class="colored" raised>설치 가이드 보러가기</paper-button></a></p>
+<h2 is-upgraded><strong>Hands-on 실습 소개</strong></h2>
+<p>이 Hands-on에서는 <strong>AI를 실제 안드로이드 개발과정에 어떻게 녹일 수 있을지 체험</strong>할 수 있습니다. 더 구조적이고 명시적인 프롬프트를 작성하기 위한 인수 조건, Android Studio에서 제공하는 여러 앱 개발 생산성 향상을 위한 Gemini 기능 등을 소개합니다.</p>
+<p>참가자는 안드로이드 스튜디오를 가볍게 다뤄본 적이 있으며, <a href="https://www.promptingguide.ai/kr" target="_blank">프롬프트 엔지니어링</a>에 대한 기본적인 지식을 알고 있다고 간주합니다. 실습 중 Compose UI 코드를 다루긴 하지만 Compose에 대한 지식을 필수적으로 요구하진 않습니다.</p>
+<aside class="special"><p><strong>Note:</strong> Hands-on 랩을 가장 진하게 맛보는 방법은, 단순히 결과물 구현을 목표로 하기보다 링크된 레퍼런스를 확인하며 학습하는 것입니다.</p>
+</aside>
+<aside class="special"><p><strong>Note:</strong> 실습의 결과물은 AI의 응답에 따라 다양한 모습을 띌 수 있습니다. 정해진 정답은 없으니, 프롬프트를 수정하거나 결과물을 선택적으로 받아들이는 것 모두 자유롭게 결정하시면 됩니다.</p>
+</aside>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="인수 조건(Acceptance Criteria)이란?" duration="5">
+        <p>AI를 본격적으로 마주하기 전에, 더욱 구조적인 결과물을 위해 <strong>인수 조건</strong>이라는 개념을 먼저 소개합니다.</p>
+<p><a href="https://www.atlassian.com/work-management/project-management/acceptance-criteria" target="_blank">https://www.atlassian.com/work-management/project-management/acceptance-criteria</a> </p>
+<p class="image-container"><img style="width: 855.03px" src="img/99a56670a6f6925.png"></p>
+<p><strong>인수 조건(Acceptance Criteria)</strong>은 소프트웨어 개발에서 기능이나 사용자 스토리가 &#39;완료&#39;되었다고 간주되기 위한 구체적인 기준을 의미합니다. 이는 팀 간 명확한 소통을 돕고, 기대치를 명확히 하여 개발 과정에서의 오해나 재작업을 줄입니다. </p>
+<p>단순히 개발 팀 내에서 뿐만 아니라 PM, QA 등 여러 이해 관계자, 그리고 <strong>자연어로 소통하는 AI 프롬프트와의 페어 프로그래밍에서도 중요한 역할</strong>을 합니다.</p>
+<h2 is-upgraded><strong>인수 조건 예시:</strong></h2>
+<p><strong>사용자 스토리:</strong> 로그인한 사용자는 계정 정보를 수정하여 프로필을 최신 상태로 유지할 수 있다.</p>
+<p><strong>인수 조건:</strong></p>
+<ul>
+<li>사용자는 계정 설정 내에서 &#39;프로필 수정&#39; 섹션에 접근할 수 있어야 한다.</li>
+<li>사용자는 이름(first name), 성(last name), 이메일 주소, 전화번호를 수정할 수 있어야 한다.</li>
+<li>&#39;저장&#39; 버튼을 클릭하면 모든 사용자 정보 변경 사항이 성공적으로 저장되어야 한다.</li>
+<li>사용자 정보가 성공적으로 업데이트되면 시스템은 확인 메시지를 표시해야 한다.</li>
+</ul>
+<h2 is-upgraded><strong>Gemini의 Tiny Cats 어플리케이션이 설명해 주는 인수 조건이 중요한 이유</strong></h2>
+<p>이론적인 설명을 넘어, 우리가 핸즈온에서 활용할 AI 도구인 Gemini에게 직접 인수 조건(Acceptance Criteria)의 중요성에 대해 물어보며 그 의미를 더 깊이 이해해 봅시다. 특히, 전통적인 소프트웨어 개발에서의 중요성과 더불어, AI 모델과 소통하는 &#39;프롬프트 엔지니어링&#39; 관점에서의 중요성을 비교하며 확인해 보는 것을 추천합니다.</p>
+<p>AI Studio에 로그인하여 Gemini 콘솔에 접속해 봅시다. Explain Things with Lots of Tiny Cats 어플리케이션에 프롬프트를 작성하면 귀여운 고양이 그림과 함께 만화를 그려줍니다. 아래의 예시 프롬프트를 날려 결과물을 확인해 봅시다.</p>
+<p><a href="https://aistudio.google.com/app/apps/bundled/tiny_cats" target="_blank"><paper-button class="colored" raised>Google AI Studio - Explain Things with Lots of Tiny Cats App</paper-button></a></p>
+<ol type="1" start="1">
+<li>구글 로그인</li>
+<li>Try Gemini 클릭</li>
+</ol>
+<h3 is-upgraded><strong>예시 프롬프트:</strong></h3>
+<p><code>Explain why Acceptance Criteria are important in Software Development.</code></p>
+<p><code>Explain why Acceptance Criteria are important in Prompt Engineering.</code></p>
+<p class="image-container"><img style="width: 624.00px" src="img/a5d06b6cfc39e037.png"></p>
+<aside class="special"><p><strong>Note:</strong> Google AI Studio에서 Gemini에게 여러 응답을 요청하고, 원하는 결과물을 빌드할 수 있습니다. 이 Hands-on에서는 자세히 다루진 않지만, Gemini를 활용한 다양한 작업을 필요로 할 때 활용합니다.</p>
+</aside>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="인수 조건 분석" duration="7">
+        <p>AI Studio에서 Gemini에게 직접 프롬프트를 날려 보았다면, 이제 Android Studio에서도 Gemini와 소통해 봅시다.</p>
+<h2 is-upgraded><strong>새 프로젝트 생성</strong></h2>
+<p>Android Studio Narwhal에서 새 프로젝트를 생성합니다. </p>
+<p><em><code>New Project</code></em> &gt; <em><code>Empty Activity</code></em> 선택. <em>Minimum SDK</em>는<em> 26 이상</em>으로 설정 후 빌드합니다.</p>
+<p>참고: <a href="https://developer.android.com/studio/projects/create-project" target="_blank">https://developer.android.com/studio/projects/create-project</a> </p>
+<p>Android Studio에서는 Gemini 채팅 인터페이스 <strong>Gemini in Android Studio</strong>를 제공하며, Android Studio Narwhal부터는 이미지 형태의 스크린샷을 첨부하여 프롬프팅할 수 있습니다.</p>
+<p>참고: <a href="https://android-developers.googleblog.com/2025/03/multimodal-image-attachment-now-available-gemini-android-studio.html" target="_blank">Android Developers Blog: Multimodal image attachment is now available for Gemini in Android Studio</a></p>
+<p class="image-container"><img style="width: 645.52px" src="img/ed92d58f667cbed6.png"></p>
+<h2 is-upgraded><strong>스크린샷으로 인수 조건 분석</strong></h2>
+<p>이제 Gemini in Android Studio에 다음 앱 스크린샷을 첨부하여 UI의 요구 사항을 분석하라고 합시다. </p>
+<h3 is-upgraded><strong>예시 프롬프트:</strong></h3>
+<p><em><code>이 화면의 인수 조건(Acceptance Criteria)을 분석해줘. 각각의 인수 조건은 테스트 시나리오로 만들어질 수 있도록 명확한 결과와 가능한 측정 가능한 수치가 포함되어야 해.</code></em></p>
+<p><em><code>[응답 예시]</code></em></p>
+<p><em><code>인수 조건: 도넛 상세 화면에는 도넛 이미지, 이름, 태그라인, 가격이 표시되어야 한다.</code></em></p>
+<p><em><code>테스트 시나리오: 1. 화면 진입 시 도넛의 이름이 올바르게 표시되는지 확인한다. (...)</code></em></p>
+<p>이미지 레퍼런스: <a href="https://github.com/android/compose-samples/tree/main/Jetsnack" target="_blank">https://github.com/android/compose-samples/tree/main/Jetsnack</a> </p>
+<table>
+<tr><td colspan="1" rowspan="1"><p class="image-container"><img style="width: 179.50px" src="img/3ae996899edb6ce6.png"></p>
+</td><td colspan="1" rowspan="1"><p class="image-container"><img style="width: 536.50px" src="img/febf45d719cdf33a.png"></p>
+</td></tr>
+</table>
+<aside class="special"><p><strong>Note:</strong> 인수 조건을 분석하지 않고, 바로 스크린샷을 첨부하여 코드로 구현해 달라고 하면 구현 결과물에 대한 퀄리티가 상대적으로 낮아집니다. 인수 조건은 자연어로 소통하는 AI 프롬프트에서 명확한 결과물을 만들어 내는 데에 효과적입니다.</p>
+</aside>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="인수 조건으로 Compose UI 코드 구현" duration="7">
+        <p>사람 간 페어 프로그래밍에서는 상호 이해를 위해 많은 커뮤니케이션이 필요하지만, 인수 조건을 기반으로 하면 AI와의 협업은 명세 기반으로 진행되어 커뮤니케이션 비용이 줄고, 결과의 퀄리티는 높아집니다.</p>
+<h3 is-upgraded><strong>예시 프롬프트:</strong></h3>
+<p><em><code>너가 분석한 요구 사항을 아래 기준에 충족하도록 Compose로 구현해줘. <br>- 의미있는 단위의 컴포넌트 분리 <br>- 동적 데이터 주입이 가능하도록 테스트 가능한 컴포넌트로 구현 <br>- Material3 컴포넌트 활용 <br>- drawable 리소스는 `R.drawable.ic_launcher_foreground` 활용<br>(선택사항) - 나는 Compose를 처음 다루는 사람이니 코드를 어떻게 삽입해야 하는지도 친절하게 알려줘.</code></em></p>
+<p>이제 앱 실행 후 결과를 확인해 봅시다.</p>
+<p class="image-container"><img style="width: 601.70px" src="img/5212934b296fb108.png"></p>
+<p>일부 컴파일 에러가 발생하더라도 괜찮습니다. Gemini에게 문제 상황을 기술하면 그 이유를 알려줄 것입니다.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="인수 테스트 만들기" duration="7">
+        <aside class="special"><p>인수 테스트가 통과되면 기능 구현은 끝이다. —  책 테스트 주도 개발로 배우는 객체 지향 설계와 실천</p>
+</aside>
+<aside class="special"><p>Formal testing with respect to user needs, requirements, and business processes conducted to determine whether a system satisfies the acceptance criteria and to enable the user, customers or other authorized entity to determine whether to accept the system. — Standard Glossary of Terms used in Software Testing</p>
+<p><a href="https://en.wikipedia.org/wiki/Acceptance_testing" target="_blank">https://en.wikipedia.org/wiki/Acceptance_testing</a> </p>
+</aside>
+<p><br>인수 테스트는 개발된 기능이 사용자의 요구사항과 비즈니스 목표를 실제로 만족시키는지를 검증하는 핵심적인 기준선(baseline) 역할을 합니다. 이론적으로 정의된 모든 인수 조건(Acceptance Criteria)을 충족하는 테스트가 성공적으로 통과하면, 해당 기능은 요구된 명세대로 구현되었다고 간주하며 <strong>개발 완료의 중요한 마일스톤으로 삼을 수 있습니다</strong>(클라이언트 개발자 입장에서는 아닐 수도...).</p>
+<p>인수 테스트는 종종 UI 테스트의 형태로 구현되어 사용자의 실제 사용 시나리오를 모방하지만, 그 초점은 단위 테스트(개별 함수/모듈의 논리적 정확성 검증)나 통합 테스트(여러 컴포넌트 간의 상호작용 검증)와는 다릅니다. 인수 테스트는 주로 &#39;<strong>기능이 사용자의 관점에서 요구사항을 올바르게 수행하는가?</strong>&#39; 에 집중합니다. 따라서 인수 테스트는 자동화된 UI 테스트(예: Espresso, 이번 핸즈온에서 다루는 Compose UI Testing), QA팀의 메뉴얼 테스트 시나리오 체크리스트 등 다양한 형태와 수준으로 존재할 수 있습니다.</p>
+<h2 is-upgraded><strong>인수 테스트 생성</strong></h2>
+<p>이제 Gemini와 함께 인수 테스트를 생성하여 구현 완료에 대한 판단 장치를 만들어 봅시다.</p>
+<h3 is-upgraded><strong>예시 프롬프트:</strong></h3>
+<p><em><code>인수 조건을 기반으로 테스트 코드를 만들어줘. <br>- Compose UI Testing 활용<br>- 구체적인 UI 정합성과 관련된 시나리오는 제외<br>- 테스트명은 한글 시나리오</code></em></p>
+<p><em><code>- 상태 변화와 관련된 시나리오에서는 관찰 가능한 state 활용<br>(선택사항) 나는 테스트를 처음 다루는 사람이니 코드를 어떻게 삽입해야 하는지도 친절하게 알려줘.</code></em></p>
+<p>테스트 코드 실행 후 결과를 확인합니다.</p>
+<p class="image-container"><img style="width: 601.70px" src="img/756c916614ec48b4.png"></p>
+<p>일부 테스트 시나리오가 실패하더라도 괜찮습니다. 다음 섹션에서 이어서 리팩터링을 진행합니다.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Gemini와 페어 프로그래밍으로 리팩터링" duration="5">
+        <p>앞선 단계에서 작성한 인수 테스트 중 일부는 실패했을 수 있습니다. 실제 개발 과정에서도 흔히 발생하는 일이며, 테스트는 바로 이런 문제를 발견하고 코드를 개선할 기회를 제공하기 위해 존재합니다.</p>
+<p>이제 <strong>Gemini를 페어 프로그래밍 파트너로 삼아, 실패하는 테스트를 통과시키거나 이 외의 코드 품질을 개선하는 리팩터링 과정</strong>을 진행해 봅시다. 리팩터링은 기능 변경 없이 코드의 구조를 개선하여 가독성, 유지보수성, 성능 등을 향상시키는 작업입니다. 리팩터링을 진행한 후에도 여전히 기작성된 인수 조건/인수 테스트로 앱의 품질을 보장할 수 있습니다.</p>
+<h2 is-upgraded>실패하는 테스트 통과시키기</h2>
+<h3 is-upgraded><strong>예시 프롬프트:</strong></h3>
+<p><em><code>‘testDonutDetails_더보기버튼_클릭하면_상세정보_확장여부_변경되는지' 테스트가 실패했어. 이 테스트를 통과하도록 함수를 리팩터링하고, 코드 개선 방안(예: 상태 관리 방식 개선, 가독성 향상)이 있다면 제안해 줘.</code></em></p>
+<p><em><code>(선택사항) 나는 Compose 상태 관리에 아직 익숙하지 않으니, 변경된 코드의 상태 관리 로직에 대해 자세히 설명해줘.</code></em></p>
+<p>Gemini는 현재 열려있는 파일이나 선택된 코드의 맥락을 이해할 수 있으므로 코드 블럭을 복사하여 붙여 넣지 않아도 됩니다.</p>
+<p>만약 테스트가 여전히 실패하거나 Gemini의 제안이 만족스럽지 않다면, 문제 상황을 더 구체적으로 설명하거나 (예: &#34;수량 상태가 여전히 업데이트되지 않아&#34;, &#34;클릭 이벤트 처리가 누락된 것 같아&#34;), 다른 접근 방식을 요청하는 추가 프롬프트를 작성하여 Gemini와 대화를 이어갑니다. 이것이 바로 AI와 함께하는 &#39;페어 프로그래밍&#39;의 과정입니다. <strong>핵심은 빠른 피드백(예: 테스트, Compose UI Preview, 실행 결과)을 받으며 긴밀한 주기로 소통하는 것</strong>입니다.</p>
+<h2 is-upgraded><strong>기존 코드 개선하기</strong></h2>
+<p>마지막으로 또 리팩터링이 필요한 곳이 있다면 추가로 요청합시다:</p>
+<h3 is-upgraded>예시 프롬프트 1:</h3>
+<p><em><code>Compose에서 UI Preview를 확인하기 위한 방법을 알려주고, 반응형 UI 요구 사항이 지켜졌는지를 확인할 수 있는 Preview를 만들어줘.</code></em></p>
+<h3 is-upgraded>예시 프롬프트 2:</h3>
+<p><em><code>UI에 포함된 비즈니스 로직을 ViewModel로 옮기고, 이 로직을 단위 테스트하는 방법을 알려줘.</code></em> </p>
+<p>참고 - Gemini와의 대화시 고려해야 할 사항: <a href="https://developer.android.com/studio/preview/gemini/chat" target="_blank">https://developer.android.com/studio/preview/gemini/chat</a> </p>
+<p class="image-container"><img style="width: 601.70px" src="img/c2559bce8eb0b6ae.png"></p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="AI로 앱 개발 생산성 올리기" duration="5">
+        <p>앞선 섹션에서는 인수 조건(Acceptance Criteria)을 기반으로 AI와 협업하여 특정 기능을 구현하고 테스트하는 과정을 경험했습니다. 이번 섹션부터는 Android Studio에 내장된 Gemini 기능을 활용하여 개발 과정 전반의 생산성을 높일 수 있는 다양한 방법들을 실습해 봅시다. </p>
+<h2 is-upgraded><strong>코드 설명 및 리팩터링 제안 받기</strong></h2>
+<p>리펙터링이 필요한 코드 스니펫을 선택하고 마우스 오른쪽 버튼을 클릭한 다음, 컨텍스트 메뉴에서 <strong>Gemini &gt; Explain Code 또는 Suggest Improvements </strong>을 선택하면 코드 개선에 도움이 될 만한 아이디어를 얻을 수 있습니다.</p>
+<p>또는 직접 코드 블럭을 선택하여 코드 개선 방향을 프롬프팅할 수도 있습니다.</p>
+<p class="image-container"><img style="width: 601.70px" src="img/ef51c7439a51dd51.png"></p>
+<h3 is-upgraded>예시 프롬프트 1:</h3>
+<p><em><code>하단 버튼 모음이 화면의 하단에 고정되도록 수정해줘.</code></em></p>
+<h3 is-upgraded>예시 프롬프트 2:</h3>
+<p><em><code>재사용 가능한 컴포넌트 조각으로 리팩터링해줘.</code></em></p>
+<p>참고: <a href="https://developer.android.com/studio/preview/gemini/ai-code-completion" target="_blank">https://developer.android.com/studio/preview/gemini/ai-code-completion</a></p>
+<h2 is-upgraded><strong>Kdoc 문서화하기</strong></h2>
+<p>개발자들에게는 새로운 코드를 작성하는 것만큼이나 기존 코드를 이해하고 문서화하며 리팩터링하는 작업도 중요합니다. Gemini는 이러한 작업들의 효율을 크게 높여줄 수 있습니다.</p>
+<p>문서화가 필요한 코드 스니펫을 선택하고 마우스 오른쪽 버튼을 클릭한 다음, 컨텍스트 메뉴에서 <strong>Gemini &gt; Document Function</strong>을 선택하면 코드에 대한 KDoc 주석을 자동으로 생성할 수 있습니다.</p>
+<p class="image-container"><img style="width: 613.50px" src="img/6cba5e282eab28c9.png"></p>
+<p>참고: <a href="https://developer.android.com/studio/preview/gemini/document" target="_blank">https://developer.android.com/studio/preview/gemini/document</a> </p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Gemini가 만들어 주는 단위 테스트 시나리오" duration="3">
+        <p>잘 작성된 단위 테스트는 비즈니스 로직의 안정성을 높이고 예상치 못한 버그를 사전에 방지하는 데 중요합니다(하지만 작성하기 매우 귀찮죠). Gemini를 활용하면 <strong>특정 함수나 클래스에 대한 단위 테스트 케이스 시나리오</strong>를 클릭 몇 번으로 생성할 수 있습니다.</p>
+<p>테스트 케이스 시나리오가 필요한 코드 스니펫을 선택하고 마우스 오른쪽 버튼을 클릭한 다음, 컨텍스트 메뉴에서 <strong>Gemini &gt; Generate Unit Test Scenarios </strong>을 선택하면 됩니다.</p>
+<p class="image-container"><img style="width: 601.70px" src="img/b45eea690fb79db8.png"></p>
+<p>참고: <a href="https://developer.android.com/studio/preview/gemini/deploy#unit-test-gen" target="_blank">https://developer.android.com/studio/preview/gemini/deploy#unit-test-gen</a> </p>
+<h2 is-upgraded><strong>이 외의 IDE에서 제공하는 기능들</strong></h2>
+<ul>
+<li><a href="https://developer.android.com/studio/preview/gemini/organize" target="_blank">변수명 짓기, 제안받기</a> </li>
+<li><a href="https://developer.android.com/studio/preview/gemini/compose" target="_blank">Compose Preview 생성에 도움받기</a></li>
+<li><a href="https://developer.android.com/studio/preview/gemini/ai-code-completion#code-completion" target="_blank">코드 자동완성</a></li>
+<li><a href="https://developer.android.com/studio/preview/gemini/deploy#crash-reports" target="_blank">크래시가 난 원인 분석하기</a></li>
+</ul>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Android 개발자들을 위한 AI 활용 예시 소개" duration="5">
+        <p>지금까지 우리는 Android Studio 내에서 Gemini를 활용하여 코드 작성, 리팩터링, 테스트 생성 등 개발 생산성을 높이는 방법에 집중했습니다. 하지만 AI는 안드로이드 개발자에게 훨씬 더 다양한 방식으로 활용될 수 있습니다. 몇 가지 아이디어를 가볍게 소개합니다.</p>
+<h2 is-upgraded><strong>서비스의 서버처럼 활용 (클라우드 API나 온디바이스 모델 활용)</strong></h2>
+<p>Gemini API와 같은 언어 모델은 단순히 개발 도구를 넘어 앱의 핵심 기능을 제공하는 콘텐츠 생성기로 활용될 수도 있습니다. (서버에서 처리하는 것이 일반적으로는 더 좋은 성능을 가지며 권장되지만, 클라이언트 단독으로도 활용하는 것도 가능하다) </p>
+<h3 is-upgraded><strong>예시: 밸런스 게임 앱</strong></h3>
+<p class="image-container"><img style="width: 622.50px" src="img/99ca7b0a4030bd68.png"></p>
+<p><a href="https://github.com/wisemuji/compose-would-you-rather-game" target="_blank">https://github.com/wisemuji/compose-would-you-rather-game</a> <br>예시 앱에서는 밸런스 게임 형식의 질문을 AI(Gemini API)가 동적으로 생성하여 사용자에게 제공합니다. 개발자가 수많은 질문 쌍을 미리 데이터베이스에 저장해 둘 필요 없이, AI가 계속해서 새롭고 흥미로운 질문을 만들어냅니다.</p>
+<p>위 예시에서는 샘플앱인 만큼 클라이언트에서 바로 AI API를 호출하는 방식을 사용하였지만, 실제 서비스 개발 시에는 이를 확장한<strong> 서버에서 클라우드 기반 AI API 호출</strong>과 <strong>온디바이스(On-device) AI 모델 실행 등의 방법</strong>을 고려해볼 수 있습니다.</p>
+<ul>
+<li><a href="https://ai.google.dev/gemini-api/docs?hl=ko" target="_blank">https://ai.google.dev/gemini-api/docs</a></li>
+<li><a href="https://developer.android.com/ai/gemini-nano" target="_blank">https://developer.android.com/ai/gemini-nano</a> </li>
+</ul>
+<h2 is-upgraded><strong>Gemini for Business (엔터프라이즈 환경)</strong></h2>
+<p><a href="https://developer.android.com/studio/preview/gemini/gemini-for-businesses" target="_blank">https://developer.android.com/studio/preview/gemini/gemini-for-businesses</a> </p>
+<p>최근에 소개된 Gemini for Business는 개인 개발자용 Gemini 기능과 달리, 조직의 데이터 보안과 개인 정보 보호에 중점을 두어 입력한 코드나 프롬프트가 Google의 모델 학습에 사용되지 않음을 보장하여, 기업의 민감한 지적 재산을 보호합니다. 조직 차원에서 접근 권한을 관리하고 보안 정책을 적용할 수도 있다는 것이 가장 큰 장점입니다.</p>
+<p>~이제 회사에 사달라고 떼쓸 시간입니다!~</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="마무리" duration="2">
+        <p>이것으로 <strong>Build with AI on Android Session 2 - AI 시대의 안드로이드 개발</strong> Hands-on 랩을 마무리합니다.</p>
+<p>앞서 살펴보았듯, 좋은 인수 조건은 사람 간의 협업뿐만 아니라 AI와의 소통에서도 큰 도움이 됩니다. 자연어 프롬프팅 과정에서 원하는 결과물을 구체적으로 전달할수록 더 정확하고 만족스러운 결과물을 얻을 수 있습니다. 인수 조건은 좋은 프롬프트 결과물을 위한 하나의 예시일 뿐이며 프롬프트 엔지니어링의 세계는 무궁무진합니다.</p>
+<p>관련해서는 최근에 구글이 공개한 프롬프트 엔지니어링 백서를 참고해 보시면 좋을 것 같습니다.</p>
+<p><a href="https://www.kaggle.com/whitepaper-prompt-engineering" target="_blank">https://www.kaggle.com/whitepaper-prompt-engineering</a></p>
+<p>이 외에도 Android Studio에 내장된 Gemini 기능을 활용하여 코드 문서화, 리팩터링 제안 받기, 단위 테스트 및 Compose Preview 생성 등 개발 과정에서 생산성을 높일 수 있는 방법들을 체험할 수 있었습니다. 이러한 내장 기능들은 계속 업데이트될 것으로 기대합니다.</p>
+<p>Hands-on 랩 완료를 진심으로 축하드립니다! 🎉</p>
+<h2 is-upgraded>참고 자료</h2>
+<ul>
+<li><strong>[강력 추천] </strong>구글이 공개한 프롬프트 엔지니어링 백서: <a href="https://www.kaggle.com/whitepaper-prompt-engineering" target="_blank">https://www.kaggle.com/whitepaper-prompt-engineering</a></li>
+<li>Gemini in Android Studio 공식 문서: <a href="https://developer.android.com/studio/preview/gemini" target="_blank">https://developer.android.com/studio/preview/gemini</a> </li>
+<li>멀티모달 이미지 첨부 (Android Developers Blog): <a href="https://android-developers.googleblog.com/2025/03/multimodal-image-attachment-now-available-gemini-android-studio.html" target="_blank">https://android-developers.googleblog.com/2025/03/multimodal-image-attachment-now-available-gemini-android-studio.html</a> </li>
+<li>Acceptance Criteria (Atlassian): <a href="https://www.atlassian.com/work-management/project-management/acceptance-criteria" target="_blank">https://www.atlassian.com/work-management/project-management/acceptance-criteria</a> </li>
+<li>Acceptance Testing (Wikipedia): <a href="https://en.wikipedia.org/wiki/Acceptance_testing" target="_blank">https://en.wikipedia.org/wiki/Acceptance_testing</a> </li>
+</ul>
+
+
+      </google-codelab-step>
+    
+  </google-codelab>
+
+  <script src="https://storage.googleapis.com/claat-public/native-shim.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/custom-elements.min.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/prettify.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/codelab-elements.js"></script>
+  <script src="//support.google.com/inapp/api.js"></script>
+
+</body>
+</html>
