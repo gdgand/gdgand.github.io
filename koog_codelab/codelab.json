@@ -3,7 +3,7 @@
   "format": "html",
   "prefix": "https://storage.googleapis.com",
   "mainga": "UA-49880327-14",
-  "updated": "2026-04-10T20:36:09+09:00",
+  "updated": "2026-04-11T03:10:24+09:00",
   "id": "koog-code-review-agent",
   "duration": 107,
   "title": "Koog으로 만드는 AI 코드 리뷰 에이전트",
@@ -21,6 +21,6 @@
   "tags": [
     "web"
   ],
-  "feedback": "https://github.com/example/feedback",
+  "feedback": "https://github.com/gdgand/2026-koog-codelab/issues",
   "url": "koog-code-review-agent"
 }
