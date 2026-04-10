@@ -1,0 +1,1461 @@
+
+<!doctype html>
+
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#4F7DC9">
+  <meta charset="UTF-8">
+  <title>Koog으로 만드는 AI 코드 리뷰 에이전트</title>
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro:400|Roboto:400,300,400italic,500,700|Roboto+Mono">
+  <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://storage.googleapis.com/claat-public/codelab-elements.css">
+  <style>
+    .success {
+      color: #1e8e3e;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <google-codelab-analytics gaid="UA-49880327-14" ga4id=""></google-codelab-analytics>
+  <google-codelab codelab-gaid=""
+                  codelab-ga4id=""
+                  id="koog-code-review-agent"
+                  title="Koog으로 만드는 AI 코드 리뷰 에이전트"
+                  environment="web"
+                  feedback-link="https://github.com/example/feedback">
+    
+      <google-codelab-step label="소개" duration="3">
+        <p>이 코드랩에서는 JetBrains의 <strong>Koog</strong> 프레임워크를 사용해 실제로 동작하는 AI 코드 리뷰 에이전트를 단계적으로 만들어봅니다.</p>
+<h2 is-upgraded>무엇을 배우나요?</h2>
+<ul>
+<li><strong>Koog AIAgent</strong>: <code>GoogleLLMClient</code>, <code>SingleLLMPromptExecutor</code>, <code>AIAgent</code>의 구성 방법</li>
+<li><strong>시스템 프롬프트 설계</strong>: 에이전트의 역할과 행동을 정의하는 방법</li>
+<li><strong>도구(Tool) 개발</strong>: <code>@Tool</code>, <code>@LLMDescription</code> 어노테이션으로 에이전트가 사용할 함수 만들기</li>
+<li><strong>이벤트 핸들러</strong>: 에이전트 실행 흐름을 관찰하는 <code>EventHandler</code> 피처</li>
+<li><strong>대화 기록 관리</strong>: JSONL 파일로 세션 히스토리 저장 및 압축</li>
+<li><strong>프로젝트 메모리</strong>: 세션을 넘어 지속되는 프로젝트별 메모리 구현</li>
+<li><strong>A2A 멀티에이전트</strong>: Agent-to-Agent 프로토콜로 전문 에이전트를 병렬 실행</li>
+</ul>
+<h2 is-upgraded>AI 에이전트란?</h2>
+<p>여러분이 사용하는 ChatGPT나 Gemini 같은 챗봇은 &#34;질문에 답하는&#34; 역할을 합니다. 반면 <strong>AI 에이전트</strong>는 목표를 받으면 <strong>스스로 판단하고, 도구를 사용하고, 여러 단계를 거쳐 작업을 완수</strong>합니다.</p>
+<table>
+<tr><td colspan="1" rowspan="1"></td><td colspan="1" rowspan="1"><p>챗봇</p>
+</td><td colspan="1" rowspan="1"><p>AI 에이전트</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>입력</p>
+</td><td colspan="1" rowspan="1"><p>질문</p>
+</td><td colspan="1" rowspan="1"><p>목표/작업</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>처리</p>
+</td><td colspan="1" rowspan="1"><p>1회 응답</p>
+</td><td colspan="1" rowspan="1"><p>반복적 추론 + 행동</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>도구</p>
+</td><td colspan="1" rowspan="1"><p>없음</p>
+</td><td colspan="1" rowspan="1"><p>파일 읽기, 검색, API 호출 등</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>자율성</p>
+</td><td colspan="1" rowspan="1"><p>수동적</p>
+</td><td colspan="1" rowspan="1"><p>능동적 (스스로 다음 행동 결정)</p>
+</td></tr>
+</table>
+<p>이 코드랩에서 만드는 코드 리뷰 에이전트는 &#34;UserService.kt를 리뷰해줘&#34;라는 목표를 받으면:</p>
+<ol type="1">
+<li><code>listFiles</code>로 프로젝트 구조 파악</li>
+<li><code>readFile</code>로 파일 내용 읽기</li>
+<li>코드 분석 후 리뷰 결과 생성</li>
+</ol>
+<p>이 과정을 <strong>자율적으로</strong> 수행합니다.</p>
+<h2 is-upgraded>최종 결과물</h2>
+<p>코드랩을 완료하면 다음 기능을 갖춘 <strong>Kode Review</strong> CLI 에이전트가 완성됩니다.</p>
+<pre><code>Koog Code Review Agent - BWAI 2026
+===================================
+명령어: /help, /clear, /memory add &lt;내용&gt;, /mode single|multi, /exit
+
+[single] You &gt; src/main/kotlin/io/github/bwai/koog/codelab/example/UserService.kt 를 리뷰해줘
+  [도구 호출] readFile
+  [도구 완료] readFile
+
+Assistant &gt; ## 코드 리뷰 결과
+
+### 요약
+SQL 인젝션 취약점이 발견되었습니다...
+</code></pre>
+<h2 is-upgraded>최종 아키텍처</h2>
+<p class="image-container"><img alt="최종 아키텍처" src="img/31e128a38d10ad7a.png"></p>
+<h2 is-upgraded>사전 준비</h2>
+<p>시작 전에 다음 항목을 준비하세요.</p>
+<ul>
+<li><strong>JDK 17 이상</strong> (JDK 21 권장)</li>
+<li><strong>Google AI Studio API 키</strong> (<a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a> 에서 무료 발급)</li>
+<li><strong>ripgrep</strong> (선택, <code>code_search</code> 도구 사용 시 필요)</li>
+</ul>
+<h2 is-upgraded>브랜치 구성</h2>
+<p>이 코드랩은 세 가지 진입점을 제공합니다.</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>브랜치</p>
+</td><td colspan="1" rowspan="1"><p>용도</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>initial</code></p>
+</td><td colspan="1" rowspan="1"><p>처음부터 따라 구현 (권장)</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>step/N</code></p>
+</td><td colspan="1" rowspan="1"><p>N 단계부터 중간 시작</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>complete</code></p>
+</td><td colspan="1" rowspan="1"><p>완성된 최종 코드 참조</p>
+</td></tr>
+</table>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="환경 설정" duration="8">
+        <h2 is-upgraded>1. 저장소 클론</h2>
+<pre><code>git clone https://github.com/bwai/2026-koog-codelab.git
+cd 2026-koog-codelab
+git checkout initial
+</code></pre>
+<h2 is-upgraded>2. API 키 설정</h2>
+<p>프로젝트 루트에 <code>local.properties</code> 파일을 생성합니다.</p>
+<pre><code># local.properties
+API_KEY=your-api-key-here
+</code></pre>
+<h2 is-upgraded>3. 빌드 확인</h2>
+<pre><code>./gradlew build
+</code></pre>
+<p>빌드가 성공하면 다음과 같이 출력됩니다.</p>
+<pre><code>BUILD SUCCESSFUL in 30s
+</code></pre>
+<h2 is-upgraded>4. 프로젝트 구조</h2>
+<pre><code>src/main/kotlin/io/github/bwai/koog/codelab/
+├── Main.kt                          ← 진입점 (직접 구현)
+├── agent/
+│   ├── ReviewAgent.kt               ← 직접 구현
+│   ├── OrchestratorAgent.kt         ← 직접 구현 (Step 11)
+│   └── specialist/
+│       ├── SpecialistReviewAgent.kt ← 사전 제공
+│       ├── SecurityReviewAgent.kt   ← 직접 구현 (Step 11)
+│       ├── PerformanceReviewAgent.kt← 직접 구현 (Step 11)
+│       └── DesignReviewAgent.kt     ← 직접 구현 (Step 11)
+├── tools/
+│   ├── ReadFileTool.kt              ← 직접 구현 (Step 4)
+│   ├── ListFileTool.kt              ← 사전 제공
+│   └── CodeSearchTool.kt            ← 사전 제공
+├── context/
+│   ├── session/
+│   │   ├── ConversationHistoryStorage.kt ← 사전 제공
+│   │   ├── JsonlEntry.kt                 ← 사전 제공
+│   │   └── JsonlConversationHistoryStorage.kt ← 직접 구현
+│   └── memory/
+│       ├── AgentMemoryStorage.kt    ← 직접 구현 (Step 10)
+│       └── KodeReviewMemoryStorage.kt ← 직접 구현 (Step 10)
+├── command/                         ← 사전 제공 (Command, CommandRegistry 등)
+│   └── MemoryCommand.kt             ← 직접 구현 (Step 10)
+│   └── ModeCommand.kt               ← 직접 구현 (Step 11)
+├── example/
+│   └── UserService.kt               ← 리뷰 실습용 예제
+└── a2a/                             ← 사전 제공 (A2A 인프라)
+</code></pre>
+<h2 is-upgraded>5. ripgrep 설치 (선택)</h2>
+<p>macOS:</p>
+<pre><code>brew install ripgrep
+</code></pre>
+<p>Ubuntu/Debian:</p>
+<pre><code>sudo apt-get install ripgrep
+</code></pre>
+<p>Windows:</p>
+<pre><code>winget install BurntSushi.ripgrep.MSVC
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="첫 번째 AI 에이전트" duration="10">
+        <p><code>initial</code> 브랜치의 <code>Main.kt</code>는 TODO 마커만 있는 스켈레톤입니다. 이제 Koog의 핵심 컴포넌트를 직접 연결해봅니다.</p>
+<h2 is-upgraded>Koog 핵심 컴포넌트</h2>
+<table>
+<tr><td colspan="1" rowspan="1"><p>클래스</p>
+</td><td colspan="1" rowspan="1"><p>역할</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>GoogleLLMClient</code></p>
+</td><td colspan="1" rowspan="1"><p>Google Gemini API와 통신하는 LLM 클라이언트</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>SingleLLMPromptExecutor</code></p>
+</td><td colspan="1" rowspan="1"><p>단일 LLM에게 프롬프트를 실행하는 실행기</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>AIAgent</code></p>
+</td><td colspan="1" rowspan="1"><p>시스템 프롬프트, 모델, 도구를 조합한 에이전트</p>
+</td></tr>
+</table>
+<h2 is-upgraded>LLM과 에이전트의 관계</h2>
+<p class="image-container"><img alt="LLM과 에이전트의 관계" src="img/5347e6464e2d1508.png"></p>
+<p><strong>LLM</strong>(Large Language Model)은 텍스트를 이해하고 생성하는 AI 모델입니다. <strong>에이전트</strong>는 이 LLM에게 역할(시스템 프롬프트)과 도구를 부여해서, 단순 텍스트 생성을 넘어 <strong>실제 작업을 수행</strong>할 수 있게 만드는 구조입니다.</p>
+<p>지금은 도구 없이 대화만 가능한 기본 에이전트를 만듭니다. Step 4부터 도구를 추가하면 진짜 &#34;에이전트&#34;가 됩니다.</p>
+<h2 is-upgraded>Main.kt 구현</h2>
+<p><code>src/main/kotlin/io/github/bwai/koog/codelab/Main.kt</code>를 다음과 같이 작성합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">package io.github.bwai.koog.codelab
+
+import ai.koog.agents.core.agent.AIAgent
+import ai.koog.prompt.executor.clients.google.GoogleLLMClient
+import ai.koog.prompt.executor.clients.google.GoogleModels
+import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
+import kotlinx.coroutines.runBlocking
+
+fun main() = runBlocking {
+    val apiKey = System.getProperty(&#34;API_KEY&#34;)
+        ?: System.getenv(&#34;API_KEY&#34;)
+        ?: error(&#34;API_KEY가 설정되지 않았습니다. 환경변수 API_KEY 또는 local.properties에 추가하세요.&#34;)
+
+    val llmClient = GoogleLLMClient(apiKey = apiKey)
+    val executor = SingleLLMPromptExecutor(llmClient)
+
+    println(&#34;Koog Code Review Agent - BWAI 2026&#34;)
+    println(&#34;===================================&#34;)
+    println(&#34;종료하려면 /exit 를 입력하세요.\n&#34;)
+
+    while (true) {
+        print(&#34;You &gt; &#34;)
+        val input = readlnOrNull()?.trim() ?: continue
+        if (input.isEmpty()) continue
+        if (input == &#34;/exit&#34;) break
+
+        val agent = AIAgent(
+            promptExecutor = executor,
+            llmModel = GoogleModels.Gemini2_0Flash,
+            systemPrompt = &#34;당신은 도움이 되는 AI 어시스턴트입니다.&#34;
+        )
+        val response = agent.run(input)
+        println(&#34;\nAssistant &gt; $response\n&#34;)
+    }
+
+    println(&#34;안녕히 가세요!&#34;)
+}
+</code></pre>
+<h2 is-upgraded>실행 확인</h2>
+<pre><code>./gradlew run
+</code></pre>
+<pre><code>Koog Code Review Agent - BWAI 2026
+===================================
+종료하려면 /exit 를 입력하세요.
+
+You &gt; 안녕하세요!
+Assistant &gt; 안녕하세요! 무엇을 도와드릴까요?
+</code></pre>
+<p>막히면 <code>git checkout step/2</code> 으로 이동하세요.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="시스템 프롬프트 설계" duration="8">
+        <p><code>AIAgent</code>에 직접 넣던 간단한 프롬프트를 전문 코드 리뷰어 역할로 확장합니다. 재사용 가능한 <code>ReviewAgent</code> 클래스로 분리합니다.</p>
+<h2 is-upgraded>ReviewAgent 클래스 생성</h2>
+<p><code>src/main/kotlin/io/github/bwai/koog/codelab/agent/ReviewAgent.kt</code> 파일을 새로 만듭니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">package io.github.bwai.koog.codelab.agent
+
+import ai.koog.agents.core.agent.AIAgent
+import ai.koog.prompt.executor.clients.google.GoogleModels
+import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
+
+class ReviewAgent(
+    private val executor: SingleLLMPromptExecutor,
+) {
+    suspend fun chat(userMessage: String): String {
+        val agent = AIAgent(
+            promptExecutor = executor,
+            llmModel = GoogleModels.Gemini2_0Flash,
+            systemPrompt = SYSTEM_PROMPT,
+        )
+        return agent.run(userMessage)
+    }
+
+    companion object {
+        val SYSTEM_PROMPT = &#34;&#34;&#34;
+# Kode Review - Kotlin 코드 리뷰 에이전트
+
+## 역할
+당신은 Kotlin/JVM 프로젝트를 전문으로 리뷰하는 시니어 코드 리뷰어입니다.
+사용자가 제출한 코드를 분석하고, 구체적이고 실행 가능한 피드백을 제공합니다.
+코드를 직접 수정하지 않으며, 리뷰 의견만 제공합니다.
+
+## 심각도 수준
+- **[CRITICAL]**: 즉시 수정 필요. 런타임 오류, 데이터 손실, 보안 취약점 유발 가능
+- **[WARNING]**: 수정 권장. 잠재적 버그, 성능 저하, 유지보수 어려움 유발 가능
+- **[SUGGESTION]**: 개선 제안. 코드 품질, 가독성, Kotlin 관용구 활용 향상
+- **[NITPICK]**: 사소한 스타일/컨벤션 의견. 선택적 반영
+
+## 행동 규칙
+1. 항상 코드를 직접 읽고 확인한 후 리뷰합니다. 추측하지 않습니다.
+2. 문제를 지적할 때 반드시 개선 방향 또는 코드 예시를 함께 제시합니다.
+3. 한국어로 응답합니다.
+&#34;&#34;&#34;.trimIndent()
+    }
+}
+</code></pre>
+<h2 is-upgraded>Main.kt 업데이트</h2>
+<p><code>ReviewAgent</code>를 사용하도록 <code>Main.kt</code>를 수정합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">package io.github.bwai.koog.codelab
+
+import ai.koog.prompt.executor.clients.google.GoogleLLMClient
+import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
+import io.github.bwai.koog.codelab.agent.ReviewAgent
+import kotlinx.coroutines.runBlocking
+
+fun main() = runBlocking {
+    val apiKey = System.getProperty(&#34;API_KEY&#34;)
+        ?: System.getenv(&#34;API_KEY&#34;)
+        ?: error(&#34;API_KEY가 설정되지 않았습니다. 환경변수 API_KEY 또는 local.properties에 추가하세요.&#34;)
+
+    val llmClient = GoogleLLMClient(apiKey = apiKey)
+    val executor = SingleLLMPromptExecutor(llmClient)
+    val reviewAgent = ReviewAgent(executor)
+
+    println(&#34;Koog Code Review Agent - BWAI 2026&#34;)
+    println(&#34;===================================&#34;)
+    println(&#34;종료하려면 /exit 를 입력하세요.\n&#34;)
+
+    while (true) {
+        print(&#34;You &gt; &#34;)
+        val input = readlnOrNull()?.trim() ?: continue
+        if (input.isEmpty()) continue
+        if (input == &#34;/exit&#34;) break
+
+        val response = reviewAgent.chat(input)
+        println(&#34;\nAssistant &gt; $response\n&#34;)
+    }
+
+    println(&#34;안녕히 가세요!&#34;)
+}
+</code></pre>
+<p>막히면 <code>git checkout step/3</code> 으로 이동하세요.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="도구 만들기 - 파일 읽기" duration="12">
+        <p>지금까지 에이전트는 사용자가 붙여넣은 코드만 분석할 수 있었습니다. 이제 에이전트가 <strong>파일을 직접 읽을 수 있는 도구</strong>를 만들어 연결합니다.</p>
+<h2 is-upgraded>@Tool 어노테이션 이해</h2>
+<p>Koog에서 에이전트가 호출할 수 있는 함수는 두 가지 어노테이션으로 선언합니다.</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>어노테이션</p>
+</td><td colspan="1" rowspan="1"><p>위치</p>
+</td><td colspan="1" rowspan="1"><p>역할</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>@Tool("이름")</code></p>
+</td><td colspan="1" rowspan="1"><p>함수</p>
+</td><td colspan="1" rowspan="1"><p>LLM이 호출할 도구 이름 지정</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>@LLMDescription("설명")</code></p>
+</td><td colspan="1" rowspan="1"><p>함수/파라미터</p>
+</td><td colspan="1" rowspan="1"><p>LLM에게 도구와 파라미터의 목적을 설명</p>
+</td></tr>
+</table>
+<h2 is-upgraded>Function Calling이란?</h2>
+<p><strong>Function Calling</strong>(함수 호출)은 LLM이 텍스트 응답 대신 <strong>함수를 호출하겠다는 의사를 표현</strong>하는 메커니즘입니다.</p>
+<p>일반적인 흐름:</p>
+<p class="image-container"><img alt="Function Calling 흐름" src="img/79647637b98ad201.png"></p>
+<p>핵심은 <strong>LLM이 직접 함수를 실행하는 것이 아니라</strong>, &#34;이 함수를 이 인자로 호출해달라&#34;고 요청하면 에이전트 프레임워크(Koog)가 실제로 실행하는 것입니다.</p>
+<p><code>@Tool</code>과 <code>@LLMDescription</code> 어노테이션은 LLM에게 &#34;이런 함수가 있고, 이런 용도입니다&#34;라는 정보를 전달합니다. LLM은 이 정보를 보고 적절한 시점에 함수 호출을 결정합니다.</p>
+<h2 is-upgraded>ReadFileTool.kt 구현</h2>
+<p><code>src/main/kotlin/io/github/bwai/koog/codelab/tools/ReadFileTool.kt</code> 파일을 생성합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">package io.github.bwai.koog.codelab.tools
+
+import ai.koog.agents.core.tools.annotations.LLMDescription
+import ai.koog.agents.core.tools.annotations.Tool
+import io.github.bwai.koog.codelab.util.resolveFilePath
+
+@Tool(&#34;readFile&#34;)
+@LLMDescription(&#34;주어진 경로의 파일 내용을 읽어서 반환합니다.&#34;)
+fun readFile(
+    @LLMDescription(&#34;읽을 파일의 경로&#34;)
+    path: String
+): String {
+    require(path.isBlank().not()) { &#34;파일 경로가 비었습니다.&#34; }
+
+    val file = resolveFilePath(path)
+
+    if (!file.exists()) return &#34;오류: 파일을 찾을 수 없습니다: $path&#34;
+    if (!file.isFile) return &#34;오류: 디렉터리입니다: $path&#34;
+    if (!file.canRead()) return &#34;오류: 읽기 권한이 없습니다: $path&#34;
+
+    return runCatching {
+        file.readText()
+    }.getOrElse {
+        &#34;오류: ${it.message}&#34;
+    }
+}
+</code></pre>
+<p>위 코드에서 <code>resolveFilePath</code>는 <code>util/File.kt</code>에 사전 제공된 헬퍼 함수입니다. 상대 경로를 프로젝트 루트 기준으로 해석합니다.</p>
+<p><code>resolveFilePath</code>는 사전 제공된 <code>util/File.kt</code>의 헬퍼 함수로, 상대/절대 경로를 프로젝트 루트 기준으로 해석합니다.</p>
+<p>빠르게 진행하려면 다음 섹션으로 넘어가세요. 직접 구현해보고 싶다면 아래 코드를 참고하세요.</p>
+<h2 is-upgraded>(선택) resolveFilePath 직접 구현하기</h2>
+<p><code>util/File.kt</code>를 직접 작성해보고 싶다면 아래 구현을 참고하세요. 이미 사전 제공되어 있으므로 <strong>이 단계는 건너뛰어도 됩니다.</strong></p>
+<pre><code language="language-kotlin" class="language-kotlin">package io.github.bwai.koog.codelab.util
+
+import java.io.File
+
+fun resolveFilePath(path: String): File {
+    val workingDir = File(System.getProperty(&#34;user.dir&#34;))
+
+    // 절대경로 탐색
+    val directFile = File(path)
+    if (directFile.exists()) {
+        return directFile.canonicalFile
+    }
+
+    // 상대 경로 탐색
+    val trimmedPath = path.trimStart(&#39;/&#39;)
+    if (trimmedPath != path) {
+        val relativeFile = File(workingDir, trimmedPath)
+        if (relativeFile.exists()) {
+            return relativeFile.canonicalFile
+        }
+    }
+
+    return File(workingDir, path).canonicalFile
+}
+</code></pre>
+<p><code>walkDirectory</code>와 <code>shouldExclude</code> 함수도 같은 파일에 있으며, Step 6에서 <code>listFiles</code> 도구가 사용합니다.</p>
+<h2 is-upgraded>ReviewAgent에 ToolRegistry 연결</h2>
+<p><code>ReviewAgent.kt</code>를 열고 <code>ToolRegistry</code>를 추가합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">package io.github.bwai.koog.codelab.agent
+
+import ai.koog.agents.core.agent.AIAgent
+import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.agents.core.tools.reflect.tool
+import ai.koog.prompt.executor.clients.google.GoogleModels
+import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
+import io.github.bwai.koog.codelab.tools.readFile
+
+class ReviewAgent(
+    private val executor: SingleLLMPromptExecutor,
+) {
+    private val registry = ToolRegistry {
+        tool(::readFile)
+    }
+
+    suspend fun chat(userMessage: String): String {
+        val agent = AIAgent(
+            promptExecutor = executor,
+            llmModel = GoogleModels.Gemini2_0Flash,
+            systemPrompt = SYSTEM_PROMPT,
+            toolRegistry = registry,
+        )
+        return agent.run(userMessage)
+    }
+
+    companion object {
+        val SYSTEM_PROMPT = // ... (Step 3과 동일)
+    }
+}
+</code></pre>
+<p><code>ToolRegistry { tool(::readFile) }</code> 블록은 함수 참조를 반영(reflection)하여 도구 스키마를 자동 생성합니다.</p>
+<h2 is-upgraded>동작 확인</h2>
+<pre><code>./gradlew run
+You &gt; src/main/kotlin/io/github/bwai/koog/codelab/example/UserService.kt 를 읽어줘
+Assistant &gt; UserService.kt 파일을 읽었습니다. 내용은 다음과 같습니다...
+</code></pre>
+<p>막히면 <code>git checkout step/4</code> 으로 이동하세요.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="도구 확장" duration="5">
+        <p><code>readFile</code> 하나만으로는 디렉터리 구조 파악이나 패턴 검색이 불가능합니다. 사전에 제공된 두 도구를 <code>ToolRegistry</code>에 추가합니다.</p>
+<h2 is-upgraded>사전 제공 도구 확인</h2>
+<p><code>tools/</code> 디렉터리에는 이미 두 도구가 있습니다.</p>
+<p><strong>ListFileTool.kt</strong> (<code>@Tool("listFile")</code>): 디렉터리를 재귀 탐색해 파일 목록을 반환합니다.</p>
+<p><strong>CodeSearchTool.kt</strong> (<code>@Tool("code_search")</code>): ripgrep을 사용해 코드 패턴을 검색합니다. 정규식을 지원하며, 결과를 50개로 제한합니다.</p>
+<h2 is-upgraded>ReviewAgent에 도구 3개 등록</h2>
+<p><code>ReviewAgent.kt</code>의 <code>ToolRegistry</code> 블록을 수정합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">import io.github.bwai.koog.codelab.tools.codeSearchTool
+import io.github.bwai.koog.codelab.tools.listFiles
+import io.github.bwai.koog.codelab.tools.readFile
+
+class ReviewAgent(
+    private val executor: SingleLLMPromptExecutor,
+) {
+    private val registry = ToolRegistry {
+        tool(::readFile)
+        tool(::listFiles)
+        tool(::codeSearchTool)
+    }
+
+    suspend fun chat(userMessage: String): String {
+        val agent = AIAgent(
+            promptExecutor = executor,
+            llmModel = GoogleModels.Gemini2_0Flash,
+            systemPrompt = SYSTEM_PROMPT,
+            toolRegistry = registry,
+        )
+        return agent.run(userMessage)
+    }
+    // ...
+}
+</code></pre>
+<p>막히면 <code>git checkout step/5</code> 으로 이동하세요.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="이벤트 핸들러" duration="8">
+        <p>에이전트가 어떤 도구를 언제 호출하는지 눈으로 보기 어렵습니다. Koog의 <strong>EventHandler</strong> 피처를 설치하면 도구 호출 흐름을 실시간으로 관찰할 수 있습니다.</p>
+<h2 is-upgraded>EventHandler 피처란?</h2>
+<p><code>EventHandler</code>는 <code>AIAgent</code>의 생명주기 이벤트를 구독할 수 있는 Koog 내장 피처입니다. <code>installFeatures</code> DSL을 통해 에이전트에 설치합니다.</p>
+<h2 is-upgraded>ReAct 패턴: 추론하고 행동하기</h2>
+<p>에이전트가 도구를 사용하는 방식은 <strong>ReAct</strong>(Reasoning + Acting) 패턴을 따릅니다.</p>
+<p class="image-container"><img alt="ReAct 패턴" src="img/31f3b6759f9673fa.png"></p>
+<p>LLM이 <strong>&#34;생각 → 행동 → 관찰&#34;을 반복</strong>하면서 복잡한 작업을 단계적으로 해결합니다. EventHandler를 설치하면 이 과정을 실시간으로 관찰할 수 있습니다.</p>
+<h2 is-upgraded>ReviewAgent에 EventHandler 설치</h2>
+<p><code>ReviewAgent.kt</code>의 <code>chat</code> 함수 내 <code>AIAgent</code> 생성 코드를 수정합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">import ai.koog.agents.features.eventHandler.feature.EventHandler
+
+class ReviewAgent(
+    private val executor: SingleLLMPromptExecutor,
+) {
+    private val registry = ToolRegistry {
+        tool(::readFile)
+        tool(::listFiles)
+        tool(::codeSearchTool)
+    }
+
+    suspend fun chat(userMessage: String): String {
+        val agent = AIAgent(
+            promptExecutor = executor,
+            llmModel = GoogleModels.Gemini2_0Flash,
+            systemPrompt = SYSTEM_PROMPT,
+            toolRegistry = registry,
+            installFeatures = {
+                install(EventHandler) {
+                    onToolCallStarting { println(&#34;  [도구 호출] ${it.toolName}&#34;); it.toolName }
+                    onToolCallCompleted { println(&#34;  [도구 완료] ${it.toolName}&#34;); it.toolName }
+                    onToolCallFailed { println(&#34;  [도구 실패] ${it.toolName}&#34;); it.toolName }
+                }
+            }
+        )
+        return agent.run(userMessage)
+    }
+    // ...
+}
+</code></pre>
+<h2 is-upgraded>실행 확인</h2>
+<pre><code>You &gt; src/main/kotlin/io/github/bwai/koog/codelab/example/ 디렉터리를 리뷰해줘
+  [도구 호출] listFile
+  [도구 완료] listFile
+  [도구 호출] readFile
+  [도구 완료] readFile
+  [도구 호출] readFile
+  [도구 완료] readFile
+
+Assistant &gt; ## 코드 리뷰 결과 ...
+</code></pre>
+<p>막히면 <code>git checkout step/6</code> 으로 이동하세요.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="예제 코드 리뷰" duration="10">
+        <p>이 단계는 <strong>새 코드를 작성하지 않습니다</strong>. 지금까지 만든 에이전트로 실제 코드를 리뷰하며 동작을 관찰합니다.</p>
+<h2 is-upgraded>예제 파일 소개</h2>
+<p><code>src/main/kotlin/io/github/bwai/koog/codelab/example/UserService.kt</code>는 의도적으로 여러 문제를 포함한 예제 파일입니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">package io.github.bwai.koog.codelab.example
+
+/**
+ * ⚠️ [코드랩 리뷰 대상] 이 파일은 의도적으로 다양한 코드 이슈를 포함합니다.
+ * AI 코드 리뷰 에이전트가 이 코드의 문제점을 찾아내는 것이 실습 목표입니다.
+ * 프로덕션 코드의 참고 예시로 사용하지 마세요.
+ */
+
+import java.sql.Connection
+import java.sql.DriverManager
+
+data class User(
+    val id: Long,
+    val name: String,
+    val email: String,
+    val password: String,
+)
+
+class UserService {
+    private val dbUrl = &#34;jdbc:mysql://localhost:3306/mydb&#34;
+    private val dbUser = &#34;root&#34;
+    private val dbPassword = &#34;admin1234&#34;
+
+    private var connection: Connection? = null
+
+    fun getConnection(): Connection {
+        if (connection == null || connection!!.isClosed) {
+            connection = DriverManager.getConnection(dbUrl, dbUser, dbPassword)
+        }
+        return connection!!
+    }
+
+    fun findUserByName(name: String): User? {
+        val conn = getConnection()
+        val stmt = conn.createStatement()
+        val rs = stmt.executeQuery(&#34;SELECT * FROM users WHERE name = &#39;$name&#39;&#34;)
+
+        return if (rs.next()) {
+            User(
+                id = rs.getLong(&#34;id&#34;),
+                name = rs.getString(&#34;name&#34;),
+                email = rs.getString(&#34;email&#34;),
+                password = rs.getString(&#34;password&#34;)
+            )
+        } else {
+            null
+        }
+    }
+
+    fun authenticate(email: String, password: String): Boolean {
+        val conn = getConnection()
+        val stmt = conn.createStatement()
+        val rs = stmt.executeQuery(
+            &#34;SELECT password FROM users WHERE email = &#39;$email&#39;&#34;
+        )
+
+        return if (rs.next()) {
+            rs.getString(&#34;password&#34;) == password
+        } else {
+            false
+        }
+    }
+}
+</code></pre>
+<h2 is-upgraded>실습</h2>
+<p>에이전트를 실행하고 다음 메시지를 입력합니다.</p>
+<pre><code>./gradlew run
+
+You &gt; src/main/kotlin/io/github/bwai/koog/codelab/example/UserService.kt 를 리뷰해줘
+</code></pre>
+<p>EventHandler 로그를 보면서 에이전트가 어떤 순서로 도구를 호출하는지 관찰합니다.</p>
+<p>다음으로 디렉터리 전체를 리뷰해봅니다.</p>
+<pre><code>You &gt; src/main/kotlin/io/github/bwai/koog/codelab/example/ 디렉터리에 있는 모든 파일을 리뷰해줘
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="대화 기록 저장" duration="8">
+        <p>지금은 매번 새 <code>AIAgent</code>를 생성해 이전 대화를 기억하지 못합니다. JSONL 파일로 대화를 저장하고, 다음 요청 시 기록을 시스템 프롬프트에 주입합니다.</p>
+<h2 is-upgraded>JSONL 형식</h2>
+<p>JSONL(JSON Lines)은 한 줄에 하나의 JSON 객체를 저장합니다.</p>
+<pre><code>{&#34;timeStamp&#34;:&#34;2026-04-10T05:30:00Z&#34;,&#34;message&#34;:{&#34;type&#34;:&#34;user&#34;,&#34;content&#34;:&#34;UserService.kt 리뷰해줘&#34;}}
+{&#34;timeStamp&#34;:&#34;2026-04-10T05:30:05Z&#34;,&#34;message&#34;:{&#34;type&#34;:&#34;assistant&#34;,&#34;content&#34;:&#34;SQL 인젝션 취약점이 발견되었습니다...&#34;}}
+</code></pre>
+<h2 is-upgraded>컨텍스트 윈도우와 메모리 문제</h2>
+<p>LLM에는 한 번에 처리할 수 있는 텍스트 양의 한계가 있습니다. 이를 <strong>컨텍스트 윈도우</strong>(context window)라고 합니다.</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>모델</p>
+</td><td colspan="1" rowspan="1"><p>컨텍스트 윈도우</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Gemini 2.0 Flash</p>
+</td><td colspan="1" rowspan="1"><p>~1M 토큰</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>GPT-4o</p>
+</td><td colspan="1" rowspan="1"><p>~128K 토큰</p>
+</td></tr>
+</table>
+<p>토큰은 대략 한국어 1글자 = 1~2토큰입니다. 컨텍스트가 넉넉해 보이지만, 코드 리뷰처럼 긴 코드와 여러 차례 대화가 오가면 금방 차게 됩니다.</p>
+<p><strong>왜 대화 기록을 직접 관리하나요?</strong> Koog의 <code>AIAgent</code>는 매 요청마다 새로 생성됩니다. 이전 대화를 기억하려면 우리가 직접 저장하고, 시스템 프롬프트에 주입해야 합니다. Step 9에서는 오래된 대화를 요약해서 컨텍스트를 효율적으로 사용하는 방법을 배웁니다.</p>
+<h2 is-upgraded>ConversationHistoryStorage 인터페이스</h2>
+<p><code>context/session/ConversationHistoryStorage.kt</code>는 사전 제공된 인터페이스입니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">interface ConversationHistoryStorage {
+    suspend fun addConversation(userMessage: String, assistantMessage: String)
+    suspend fun getHistory(): List&lt;Message&gt;
+    suspend fun getSummary(): String?
+    suspend fun compressHistory(executor: PromptExecutor, model: LLModel)
+}
+</code></pre>
+<h2 is-upgraded>JsonlConversationHistoryStorage 구현</h2>
+<p><code>src/main/kotlin/io/github/bwai/koog/codelab/context/session/JsonlConversationHistoryStorage.kt</code>를 생성합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">package io.github.bwai.koog.codelab.context.session
+
+import ai.koog.prompt.executor.model.PromptExecutor
+import ai.koog.prompt.llm.LLModel
+import ai.koog.prompt.message.Message
+import ai.koog.prompt.message.RequestMetaInfo
+import ai.koog.prompt.message.ResponseMetaInfo
+import ai.koog.rag.base.files.JVMFileSystemProvider
+import ai.koog.rag.base.files.createDirectory
+import ai.koog.rag.base.files.readText
+import ai.koog.rag.base.files.writeText
+import kotlinx.datetime.Clock
+import kotlinx.serialization.json.Json
+import java.nio.file.Path
+import kotlin.time.Clock.System as KotlinClock
+
+class JsonlConversationHistoryStorage(
+    private val fs: JVMFileSystemProvider.ReadWrite,
+    private val sessionDir: Path,
+    private val json: Json = Json {
+        ignoreUnknownKeys = true
+        prettyPrint = false
+    }
+) : ConversationHistoryStorage {
+    private val historyFile: Path
+        get() = fs.joinPath(sessionDir, &#34;session.jsonl&#34;)
+    private val summaryFile: Path
+        get() = fs.joinPath(sessionDir, &#34;summary.md&#34;)
+
+    private suspend fun ensureDirectory() {
+        if (!fs.exists(sessionDir)) {
+            fs.createDirectory(sessionDir)
+        }
+    }
+</code></pre>
+<p>파일 읽기/쓰기 메서드를 추가합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">    private suspend fun loadAllMessages(): List&lt;Message&gt; {
+        if (!fs.exists(historyFile)) return emptyList()
+        return fs.readText(historyFile).lines()
+            .filter { it.isNotBlank() }
+            .mapNotNull {
+                runCatching {
+                    json.decodeFromString&lt;JsonlEntry&gt;(it).message
+                }.onFailure { err -&gt;
+                    System.err.println(&#34;  [경고] 대화 기록 파싱 실패: ${err.message}&#34;)
+                }.getOrNull()
+            }
+    }
+
+    override suspend fun addConversation(userMessage: String, assistantMessage: String) {
+        ensureDirectory()
+        val existingContent = if (fs.exists(historyFile)) fs.readText(historyFile) else &#34;&#34;
+        val userEntry = JsonlEntry(
+            timeStamp = Clock.System.now(),
+            message = Message.User(userMessage, RequestMetaInfo.create(KotlinClock))
+        )
+        val assistantEntry = JsonlEntry(
+            timeStamp = Clock.System.now(),
+            message = Message.Assistant(assistantMessage, ResponseMetaInfo.create(KotlinClock))
+        )
+        val newLines = listOf(userEntry, assistantEntry)
+            .joinToString(&#34;\n&#34;) { json.encodeToString&lt;JsonlEntry&gt;(it) }
+        val updatedContent = if (existingContent.isEmpty()) newLines
+                             else existingContent + &#34;\n&#34; + newLines
+        fs.writeText(historyFile, updatedContent)
+    }
+
+    override suspend fun getHistory(): List&lt;Message&gt; =
+        loadAllMessages().takeLast(KEEP_RECENT)
+
+    override suspend fun getSummary(): String? {
+        if (!fs.exists(summaryFile)) return null
+        return fs.readText(summaryFile).ifBlank { null }
+    }
+
+    override suspend fun compressHistory(executor: PromptExecutor, model: LLModel) {
+        // Step 9에서 구현됩니다.
+    }
+
+    companion object {
+        private const val KEEP_RECENT = 4
+    }
+}
+</code></pre>
+<h2 is-upgraded>ReviewAgent에 연결</h2>
+<p><code>ReviewAgent.kt</code>에 <code>conversationHistoryStorage</code>를 추가하고 <code>chat</code> 함수를 수정합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">import ai.koog.rag.base.files.JVMFileSystemProvider
+import io.github.bwai.koog.codelab.context.session.JsonlConversationHistoryStorage
+import java.nio.file.Path
+import java.util.UUID
+
+class ReviewAgent(
+    private val executor: SingleLLMPromptExecutor,
+    projectDir: String = &#34;default&#34;,
+    sessionId: String = UUID.randomUUID().toString(),
+) {
+    // ... registry, installFeatures 동일 ...
+
+    val conversationHistoryStorage = JsonlConversationHistoryStorage(
+        fs = JVMFileSystemProvider.ReadWrite,
+        sessionDir = Path.of(&#34;.kode_review/projects/$projectDir/$sessionId&#34;),
+    )
+
+    suspend fun chat(userMessage: String): String {
+        val history = conversationHistoryStorage.getHistory()
+        val summary = conversationHistoryStorage.getSummary()
+        val system = buildSystemPromptWithHistory(history, summary)
+
+        val agent = AIAgent(
+            promptExecutor = executor,
+            llmModel = GoogleModels.Gemini2_0Flash,
+            systemPrompt = system,
+            toolRegistry = registry,
+            installFeatures = { /* EventHandler 동일 */ }
+        )
+        val assistantMessage = agent.run(userMessage)
+        conversationHistoryStorage.addConversation(userMessage, assistantMessage)
+        return assistantMessage
+    }
+}
+</code></pre>
+<p>대화 기록은 <code>.kode_review/projects/default/<uuid>/session.jsonl</code>에 저장됩니다.</p>
+<p>막히면 <code>git checkout step/8</code> 으로 이동하세요.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="대화 기록 압축" duration="7">
+        <p>대화가 길어질수록 시스템 프롬프트에 모든 기록을 주입하면 컨텍스트 창이 넘칩니다. <strong>Sliding Window 요약</strong> 전략으로 오래된 대화를 압축합니다.</p>
+<h2 is-upgraded>Sliding Window 전략이란?</h2>
+<p>대화 기록이 일정 개수(THRESHOLD)를 초과하면, 오래된 메시지를 LLM으로 <strong>요약</strong>하고 최근 메시지만 유지합니다.</p>
+<p>핵심 아이디어:</p>
+<ul>
+<li><strong>COMPRESS_THRESHOLD = 10</strong>: 메시지가 10개를 넘으면 압축 실행</li>
+<li><strong>KEEP_RECENT = 4</strong>: 최근 4개 메시지는 항상 원본 유지</li>
+<li><strong>나머지</strong>: LLM에게 요약을 요청해서 <code>summary.md</code>에 저장</li>
+</ul>
+<p class="image-container"><img alt="Sliding Window 전략" src="img/1978fba040b9c784.png"></p>
+<p>이렇게 하면 대화가 아무리 길어져도 시스템 프롬프트에 들어가는 양은 <strong>요약 + 최근 4개</strong>로 일정하게 유지됩니다. Koog의 <code>prompt {}</code> DSL을 사용하면 요약 요청도 간단하게 구성할 수 있습니다.</p>
+<h2 is-upgraded>compressHistory 구현</h2>
+<p><code>JsonlConversationHistoryStorage.kt</code>의 <code>compressHistory</code> 메서드를 구현합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">import ai.koog.prompt.dsl.prompt
+
+override suspend fun compressHistory(
+    executor: PromptExecutor,
+    model: LLModel
+) {
+    val allMessages = loadAllMessages()
+    if (allMessages.size &lt;= COMPRESS_THRESHOLD) return
+
+    val messagesToSummarize = allMessages.dropLast(KEEP_RECENT)
+
+    val conversationText = buildString {
+        getSummary()?.let {
+            appendLine(&#34;이전 요약: $it&#34;)
+            appendLine()
+        }
+        messagesToSummarize.forEach {
+            when (it) {
+                is Message.User -&gt; appendLine(&#34;User: ${it.content}&#34;)
+                is Message.Assistant -&gt; appendLine(&#34;Assistant: ${it.content}&#34;)
+                else -&gt; {}
+            }
+        }
+    }
+
+    val summarizePrompt = prompt(&#34;summarize&#34;) {
+        system(conversationText)
+        user(&#34;이 대화를 간결하게 요약하세요:&#34;)
+    }
+
+    val response = executor.execute(model = model, prompt = summarizePrompt)
+    val summary = response.firstOrNull()?.content ?: &#34;요약을 생성할 수 없습니다.&#34;
+    fs.writeText(summaryFile, summary)
+}
+
+companion object {
+    private const val COMPRESS_THRESHOLD = 10
+    private const val KEEP_RECENT = 4
+}
+</code></pre>
+<h2 is-upgraded>ReviewAgent에서 압축 호출</h2>
+<p><code>ReviewAgent.kt</code>의 <code>chat</code> 함수 시작 부분에 압축 호출을 추가합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">suspend fun chat(userMessage: String): String {
+    conversationHistoryStorage.compressHistory(executor, GoogleModels.Gemini2_0Flash)
+    val history = conversationHistoryStorage.getHistory()
+    val summary = conversationHistoryStorage.getSummary()
+    // ...
+}
+</code></pre>
+<p>막히면 <code>git checkout step/9</code> 으로 이동하세요.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="프로젝트 메모리" duration="8">
+        <p>대화 기록은 세션이 끝나면 새 UUID로 시작됩니다. <strong>프로젝트 메모리</strong>는 세션을 넘어 지속되는 정보를 <code>KODE_REVIEW.md</code> 파일에 저장합니다.</p>
+<h2 is-upgraded>AgentMemoryStorage 인터페이스</h2>
+<p><code>src/main/kotlin/io/github/bwai/koog/codelab/context/memory/AgentMemoryStorage.kt</code>를 생성합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">package io.github.bwai.koog.codelab.context.memory
+
+interface AgentMemoryStorage {
+    suspend fun addMemory(content: String)
+    suspend fun getMemory(): String?
+}
+</code></pre>
+<h2 is-upgraded>KodeReviewMemoryStorage 구현</h2>
+<p><code>src/main/kotlin/io/github/bwai/koog/codelab/context/memory/KodeReviewMemoryStorage.kt</code>를 생성합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">package io.github.bwai.koog.codelab.context.memory
+
+import ai.koog.rag.base.files.JVMFileSystemProvider
+import ai.koog.rag.base.files.readText
+import ai.koog.rag.base.files.writeText
+import java.nio.file.Path
+import kotlin.io.path.Path
+
+class KodeReviewMemoryStorage(
+    private val fs: JVMFileSystemProvider.ReadWrite
+) : AgentMemoryStorage {
+    private val memoryFile: Path = Path(&#34;./KODE_REVIEW.md&#34;)
+
+    override suspend fun addMemory(content: String) {
+        val existing = getMemory() ?: &#34;&#34;
+        val updated = if (existing.isEmpty()) &#34;- $content&#34;
+                      else &#34;$existing\n- $content&#34;
+        fs.writeText(memoryFile, updated)
+    }
+
+    override suspend fun getMemory(): String? {
+        if (!fs.exists(memoryFile)) return null
+        return fs.readText(memoryFile).ifBlank { null }
+    }
+}
+</code></pre>
+<h2 is-upgraded>MemoryCommand 구현</h2>
+<p><code>src/main/kotlin/io/github/bwai/koog/codelab/command/MemoryCommand.kt</code>를 생성합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">package io.github.bwai.koog.codelab.command
+
+import io.github.bwai.koog.codelab.context.memory.AgentMemoryStorage
+
+class MemoryCommand(
+    private val memoryStorage: AgentMemoryStorage
+) : Command {
+    override val name = &#34;memory&#34;
+    override val aliases = listOf(&#34;mem&#34;)
+    override val description = &#34;프로젝트 메모리 추가 (사용법: /memory add &lt;내용&gt;)&#34;
+    override val usage = &#34;/memory add &lt;내용&gt;&#34;
+
+    override suspend fun execute(args: List&lt;String&gt;): CommandResult {
+        if (args.isEmpty() || args.first() != &#34;add&#34;) {
+            println(&#34;사용법: /memory add &lt;내용&gt;&#34;)
+            return CommandResult.Success()
+        }
+        val content = args.drop(1).joinToString(&#34; &#34;)
+        if (content.isBlank()) {
+            println(&#34;기억할 내용을 입력하세요.&#34;)
+            return CommandResult.Success()
+        }
+        memoryStorage.addMemory(content)
+        println(&#34;메모리 저장 완료: $content&#34;)
+        return CommandResult.Success()
+    }
+}
+</code></pre>
+<h2 is-upgraded>ReviewAgent와 Main.kt 업데이트</h2>
+<p><code>ReviewAgent.kt</code>에 <code>agentMemoryStorage</code>를 추가하고 <code>buildSystemPromptWithHistory</code>에서 메모리를 활용합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">val agentMemoryStorage: AgentMemoryStorage = KodeReviewMemoryStorage(
+    fs = JVMFileSystemProvider.ReadWrite
+)
+
+private fun buildSystemPromptWithHistory(
+    history: List&lt;Message&gt;, summary: String?, memory: String?
+): String {
+    if (summary == null &amp;&amp; history.isEmpty() &amp;&amp; memory == null) return SYSTEM_PROMPT
+    return buildString {
+        appendLine(&#34;# System Prompt&#34;)
+        appendLine(SYSTEM_PROMPT)
+        memory?.let {
+            appendLine(&#34;\n# Project Memory&#34;)
+            appendLine(&#34;아래는 이 프로젝트에 대해 기억해야할 정보입니다:&#34;)
+            appendLine(it)
+        }
+        summary?.let { appendLine(&#34;\n# Previous Conversation Summary\n$it&#34;) }
+        if (history.isNotEmpty()) {
+            appendLine(&#34;\n# Recent Conversation&#34;)
+            history.forEach {
+                when (it) {
+                    is Message.User -&gt; appendLine(&#34;User: ${it.content}&#34;)
+                    is Message.Assistant -&gt; appendLine(&#34;Assistant: ${it.content}&#34;)
+                    else -&gt; {}
+                }
+            }
+        }
+        appendLine(&#34;\n위의 맥락을 바탕으로 대화를 이어가 주세요.&#34;)
+    }
+}
+</code></pre>
+<p><code>Main.kt</code>에서 <code>MemoryCommand</code>를 등록합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">import io.github.bwai.koog.codelab.command.MemoryCommand
+
+val commandRegistry = CommandRegistry()
+commandRegistry.registerAll(
+    ExitCommand(),
+    ClearCommand(),
+    MemoryCommand(reviewAgent.agentMemoryStorage)
+)
+commandRegistry.register(HelpCommand(commandRegistry))
+</code></pre>
+<h2 is-upgraded>실습</h2>
+<pre><code>You &gt; /memory add 이 프로젝트는 Spring Boot 3.x 기반입니다
+메모리 저장 완료: 이 프로젝트는 Spring Boot 3.x 기반입니다
+
+You &gt; UserService.kt 를 리뷰해줘
+# Spring Boot 3.x 프로젝트 맥락에서 리뷰합니다...
+</code></pre>
+<p>막히면 <code>git checkout step/10</code> 으로 이동하세요.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="A2A 멀티에이전트" duration="12">
+        <p>단일 에이전트는 보안, 성능, 설계를 순차 처리합니다. <strong>A2A(Agent-to-Agent)</strong> 프로토콜을 사용해 세 전문 에이전트를 병렬로 실행하는 오케스트레이터를 구현합니다.</p>
+<h2 is-upgraded>A2A 프로토콜 개요</h2>
+<p>A2A는 에이전트 간 HTTP 기반 통신 표준입니다. 각 에이전트는 서버로 동작하고, 오케스트레이터가 클라이언트로 연결합니다.</p>
+<p class="image-container"><img alt="A2A 프로토콜 개요" src="img/452eabdff3f5b0e5.png"></p>
+<p><code>a2a/</code> 디렉터리에는 A2A 통신을 위한 두 매니저 클래스가 사전 제공되어 있습니다.</p>
+<h2 is-upgraded>A2AServerManager — 전문 에이전트를 서버로 띄우기</h2>
+<p>각 전문 에이전트는 독립적인 HTTP 서버로 동작합니다. <code>A2AServerManager</code>는 이 서버들의 생명주기를 관리합니다.</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>메서드</p>
+</td><td colspan="1" rowspan="1"><p>역할</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>startAgent()</code></p>
+</td><td colspan="1" rowspan="1"><p>동적 포트 할당(<code>ServerSocket(0)</code>) → AgentCard 생성 → Ktor Netty 서버 시작</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>stopAgent()</code></p>
+</td><td colspan="1" rowspan="1"><p>특정 에이전트 서버 종료</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>stopAll()</code></p>
+</td><td colspan="1" rowspan="1"><p>모든 서버 종료 + 코루틴 스코프 취소</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>getUrl()</code></p>
+</td><td colspan="1" rowspan="1"><p>에이전트의 HTTP URL 반환 (예: <code>http://localhost:54321</code>)</p>
+</td></tr>
+</table>
+<p>핵심 흐름: <code>ServerSocket(0)</code>으로 OS가 사용 가능한 포트를 자동 할당하고, <code>AgentCard</code>(에이전트 이름, 설명, URL, 기능)를 정의한 뒤, Koog의 <code>A2AServer</code> + <code>HttpJSONRPCServerTransport</code>를 통해 JSON-RPC 기반 HTTP 서버를 시작합니다.</p>
+<h2 is-upgraded>A2AClientManager — 전문 에이전트에 요청 보내기</h2>
+<p><code>OrchestratorAgent</code>가 전문 에이전트와 통신할 때 사용하는 클라이언트 매니저입니다.</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>메서드</p>
+</td><td colspan="1" rowspan="1"><p>역할</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>connect()</code></p>
+</td><td colspan="1" rowspan="1"><p>전문 에이전트 서버에 연결 (<code>A2AClient</code> + <code>UrlAgentCardResolver</code>로 AgentCard 자동 발견)</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>sendMessage()</code></p>
+</td><td colspan="1" rowspan="1"><p>텍스트 메시지를 보내고 응답을 받음 (<code>MessageSendParams</code> → JSON-RPC → 텍스트 응답 추출)</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><code>disconnectAll()</code></p>
+</td><td colspan="1" rowspan="1"><p>모든 연결 해제</p>
+</td></tr>
+</table>
+<p>핵심 흐름: <code>UrlAgentCardResolver</code>가 서버의 <code>/.well-known/agent.json</code>에서 AgentCard를 자동으로 가져오고, <code>A2AClient</code>가 JSON-RPC 프로토콜로 메시지를 전송합니다. 응답에서 <code>TextPart</code>만 추출하여 문자열로 반환합니다.</p>
+<h2 is-upgraded>전체 통신 흐름</h2>
+<pre><code>OrchestratorAgent
+    │
+    ├─ A2AClientManager.connect(&#34;security&#34;, &#34;http://localhost:54321&#34;)
+    │       └─ UrlAgentCardResolver → AgentCard 발견
+    │       └─ A2AClient 연결
+    │
+    ├─ A2AClientManager.sendMessage(&#34;security&#34;, &#34;UserService.kt를 리뷰해줘&#34;)
+    │       └─ MessageSendParams (JSON-RPC) → 전문 에이전트 서버
+    │       └─ 전문 에이전트가 AIAgent.run() 실행
+    │       └─ 결과를 TextPart로 반환
+    │
+    └─ 3개 에이전트에 병렬로 sendMessage → 결과 종합
+</code></pre>
+<p>이 인프라 위에 여러분이 직접 구현할 것은 <strong>전문 에이전트의 시스템 프롬프트</strong>와 <strong>오케스트레이터의 병렬 호출 로직</strong>입니다.</p>
+<h2 is-upgraded>멀티에이전트 아키텍처란?</h2>
+<p>단일 에이전트가 모든 일을 하면 시스템 프롬프트가 비대해지고, 전문성이 떨어집니다. <strong>멀티에이전트</strong>는 역할을 분리합니다.</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>패턴</p>
+</td><td colspan="1" rowspan="1"><p>설명</p>
+</td><td colspan="1" rowspan="1"><p>이 코드랩</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><strong>Orchestrator</strong></p>
+</td><td colspan="1" rowspan="1"><p>작업을 분배하고 결과를 종합</p>
+</td><td colspan="1" rowspan="1"><p><code>OrchestratorAgent</code></p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><strong>Specialist</strong></p>
+</td><td colspan="1" rowspan="1"><p>특정 영역에 집중한 전문가</p>
+</td><td colspan="1" rowspan="1"><p>Security, Performance, Design Agent</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><strong>병렬 실행</strong></p>
+</td><td colspan="1" rowspan="1"><p>독립적인 작업을 동시에 처리</p>
+</td><td colspan="1" rowspan="1"><p><code>coroutineScope { async { ... } }</code></p>
+</td></tr>
+</table>
+<p>실제 대규모 AI 시스템에서 이 패턴이 널리 사용됩니다:</p>
+<ul>
+<li><strong>코드 리뷰</strong>: 보안 + 성능 + 설계를 각각 전문 에이전트가 분석</li>
+<li><strong>고객 지원</strong>: 분류 에이전트 → 전문 상담 에이전트 라우팅</li>
+<li><strong>데이터 분석</strong>: 수집 에이전트 → 분석 에이전트 → 시각화 에이전트 체인</li>
+</ul>
+<p><strong>A2A 프로토콜</strong>은 이러한 에이전트 간 통신을 HTTP 기반으로 표준화한 것입니다. 각 에이전트는 독립 서버로 동작하므로, 서로 다른 언어나 프레임워크로 만든 에이전트끼리도 통신할 수 있습니다.</p>
+<h2 is-upgraded>전문 에이전트 구현</h2>
+<p>세 전문 에이전트는 사전 제공된 <code>SpecialistReviewAgent</code> 추상 클래스를 상속합니다.</p>
+<p><code>SecurityReviewAgent.kt</code>:</p>
+<pre><code language="language-kotlin" class="language-kotlin">package io.github.bwai.koog.codelab.agent.specialist
+
+import ai.koog.agents.core.tools.ToolRegistry
+
+class SecurityReviewAgent(toolRegistry: ToolRegistry, apiKey: String) : SpecialistReviewAgent(toolRegistry, apiKey) {
+    override val domain = &#34;security&#34;
+    override val systemPrompt = &#34;&#34;&#34;
+# 보안 코드 리뷰 에이전트
+
+## 역할
+당신은 Kotlin/JVM 프로젝트의 보안 취약점을 전문으로 분석하는 시니어 보안 리뷰어입니다.
+
+## 보안 리뷰 범위
+1. **인증/인가**: 인증 우회, 권한 상승 취약점
+2. **입력 검증**: SQL 인젝션, XSS, 커맨드 인젝션 가능성
+3. **민감 데이터 처리**: 비밀번호, API 키, 개인정보 노출 위험
+4. **암호화**: 취약한 암호화 알고리즘, 하드코딩된 시크릿
+
+## 행동 규칙
+1. 코드를 직접 읽고 실제 취약점만 지적합니다.
+2. 각 취약점의 실제 악용 시나리오를 설명합니다.
+3. 한국어로 응답합니다.
+&#34;&#34;&#34;.trimIndent()
+}
+</code></pre>
+<p><code>PerformanceReviewAgent.kt</code>와 <code>DesignReviewAgent.kt</code>도 같은 패턴으로 구현합니다 (<code>domain</code>과 <code>systemPrompt</code>만 전문 영역에 맞게 작성).</p>
+<h2 is-upgraded>OrchestratorAgent 구현</h2>
+<p><code>src/main/kotlin/io/github/bwai/koog/codelab/agent/OrchestratorAgent.kt</code>를 생성합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">package io.github.bwai.koog.codelab.agent
+
+import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.agents.core.tools.reflect.tool
+import io.github.bwai.koog.codelab.a2a.client.A2AClientManager
+import io.github.bwai.koog.codelab.a2a.server.A2AServerManager
+import io.github.bwai.koog.codelab.agent.specialist.DesignReviewAgent
+import io.github.bwai.koog.codelab.agent.specialist.PerformanceReviewAgent
+import io.github.bwai.koog.codelab.agent.specialist.SecurityReviewAgent
+import io.github.bwai.koog.codelab.tools.codeSearchTool
+import io.github.bwai.koog.codelab.tools.listFiles
+import io.github.bwai.koog.codelab.tools.readFile
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+
+class OrchestratorAgent(private val apiKey: String) {
+    private val toolRegistry = ToolRegistry {
+        tool(::readFile)
+        tool(::listFiles)
+        tool(::codeSearchTool)
+    }
+
+    private val serverManager = A2AServerManager()
+    private val clientManager = A2AClientManager()
+
+    suspend fun start() {
+        val securityUrl = serverManager.startAgent(
+            agentId = &#34;security&#34;,
+            agentName = &#34;Security Review Agent&#34;,
+            agentDescription = &#34;Kotlin 코드의 보안 취약점을 분석합니다.&#34;,
+            executor = SpecialistAgentExecutor(SecurityReviewAgent(toolRegistry, apiKey)),
+        )
+        val performanceUrl = serverManager.startAgent(
+            agentId = &#34;performance&#34;,
+            agentName = &#34;Performance Review Agent&#34;,
+            agentDescription = &#34;Kotlin 코드의 성능 이슈를 분석합니다.&#34;,
+            executor = SpecialistAgentExecutor(PerformanceReviewAgent(toolRegistry, apiKey)),
+        )
+        val designUrl = serverManager.startAgent(
+            agentId = &#34;design&#34;,
+            agentName = &#34;Design Review Agent&#34;,
+            agentDescription = &#34;Kotlin 코드의 설계 이슈를 분석합니다.&#34;,
+            executor = SpecialistAgentExecutor(DesignReviewAgent(toolRegistry, apiKey)),
+        )
+        delay(1000)
+        clientManager.connect(&#34;security&#34;, securityUrl)
+        clientManager.connect(&#34;performance&#34;, performanceUrl)
+        clientManager.connect(&#34;design&#34;, designUrl)
+        println(&#34;  [멀티에이전트] 전문 에이전트 서버 시작 완료&#34;)
+    }
+</code></pre>
+<p>병렬 리뷰 메서드를 추가합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">    suspend fun review(request: String): String = coroutineScope {
+        println(&#34;  [오케스트레이터] 3개 전문 에이전트에 병렬 리뷰 요청 중...&#34;)
+
+        val securityDeferred = async {
+            println(&#34;  [security] 리뷰 시작&#34;)
+            clientManager.sendMessage(&#34;security&#34;, request)
+                .also { println(&#34;  [security] 리뷰 완료&#34;) }
+        }
+        val performanceDeferred = async {
+            println(&#34;  [performance] 리뷰 시작&#34;)
+            clientManager.sendMessage(&#34;performance&#34;, request)
+                .also { println(&#34;  [performance] 리뷰 완료&#34;) }
+        }
+        val designDeferred = async {
+            println(&#34;  [design] 리뷰 시작&#34;)
+            clientManager.sendMessage(&#34;design&#34;, request)
+                .also { println(&#34;  [design] 리뷰 완료&#34;) }
+        }
+
+        val results = listOf(securityDeferred, performanceDeferred, designDeferred)
+            .map { it.await() }
+
+        buildString {
+            appendLine(&#34;# 멀티에이전트 코드 리뷰 결과&#34;)
+            appendLine(&#34;\n## 보안 리뷰&#34;)
+            appendLine(results[0])
+            appendLine(&#34;\n## 성능 리뷰&#34;)
+            appendLine(results[1])
+            appendLine(&#34;\n## 설계 리뷰&#34;)
+            appendLine(results[2])
+        }
+    }
+
+    suspend fun stop() {
+        serverManager.stopAll()
+        clientManager.disconnectAll()
+    }
+}
+</code></pre>
+<h2 is-upgraded>ModeCommand 구현</h2>
+<p><code>src/main/kotlin/io/github/bwai/koog/codelab/command/ModeCommand.kt</code>를 생성합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">package io.github.bwai.koog.codelab.command
+
+class ModeCommand(
+    private val onModeChange: (String) -&gt; Unit
+) : Command {
+    override val name = &#34;mode&#34;
+    override val description = &#34;리뷰 모드 전환 (사용법: /mode single|multi)&#34;
+    override val usage = &#34;/mode single|multi&#34;
+
+    override suspend fun execute(args: List&lt;String&gt;): CommandResult {
+        val mode = args.firstOrNull()
+        return when (mode) {
+            &#34;single&#34; -&gt; {
+                onModeChange(&#34;single&#34;)
+                println(&#34;단일 에이전트 모드로 전환되었습니다.&#34;)
+                CommandResult.Success()
+            }
+            &#34;multi&#34; -&gt; {
+                onModeChange(&#34;multi&#34;)
+                println(&#34;멀티 에이전트 모드로 전환되었습니다. (security + performance + design)&#34;)
+                CommandResult.Success()
+            }
+            else -&gt; {
+                println(&#34;사용법: /mode single|multi&#34;)
+                CommandResult.Success()
+            }
+        }
+    }
+}
+</code></pre>
+<h2 is-upgraded>Main.kt 최종 업데이트</h2>
+<pre><code language="language-kotlin" class="language-kotlin">enum class ReviewMode { SINGLE, MULTI }
+
+fun main() = runBlocking {
+    val apiKey = System.getProperty(&#34;API_KEY&#34;)
+        ?: System.getenv(&#34;API_KEY&#34;)
+        ?: error(&#34;API_KEY가 설정되지 않았습니다. 환경변수 API_KEY 또는 local.properties에 추가하세요.&#34;)
+
+    val llmClient = GoogleLLMClient(apiKey = apiKey)
+    val executor = SingleLLMPromptExecutor(llmClient)
+    var reviewAgent = ReviewAgent(executor)
+
+    var currentMode = ReviewMode.SINGLE
+    var orchestrator: OrchestratorAgent? = null
+
+    val commandRegistry = CommandRegistry()
+    commandRegistry.registerAll(
+        ExitCommand(),
+        ClearCommand(),
+        MemoryCommand(reviewAgent.agentMemoryStorage),
+        ModeCommand { newMode -&gt;
+            currentMode = if (newMode == &#34;multi&#34;) ReviewMode.MULTI else ReviewMode.SINGLE
+        }
+    )
+    commandRegistry.register(HelpCommand(commandRegistry))
+
+    println(&#34;Koog Code Review Agent - BWAI 2026&#34;)
+    println(&#34;===================================&#34;)
+    println(&#34;명령어: /help, /clear, /memory add &lt;내용&gt;, /mode single|multi, /exit&#34;)
+    println()
+
+    while (true) {
+        print(&#34;[${currentMode.name.lowercase()}] You &gt; &#34;)
+        val input = readlnOrNull()?.trim() ?: continue
+        if (input.isEmpty()) continue
+
+        if (input.startsWith(&#34;/&#34;)) {
+            when (val result = commandRegistry.execute(input)) {
+                is CommandResult.Exit -&gt; {
+                    orchestrator?.stop()
+                    println(&#34;안녕히 가세요!&#34;)
+                    break
+                }
+                is CommandResult.ClearSession -&gt; {
+                    reviewAgent = ReviewAgent(executor)
+                }
+                is CommandResult.Error -&gt; {
+                    println(&#34;오류: ${result.message}&#34;)
+                }
+                null -&gt; {
+                    println(&#34;알 수 없는 명령어입니다. /help 를 입력하세요.&#34;)
+                }
+                else -&gt; {}
+            }
+            continue
+        }
+
+        val response = try {
+            when (currentMode) {
+                ReviewMode.MULTI -&gt; {
+                    val orch = orchestrator ?: run {
+                        orchestrator = OrchestratorAgent(apiKey)
+                        orchestrator!!.also { it.start() }
+                    }
+                    orch.review(input)
+                }
+                ReviewMode.SINGLE -&gt; reviewAgent.chat(input)
+            }
+        } catch (e: Exception) {
+            &#34;오류가 발생했습니다: ${e.message}\n다시 시도해주세요.&#34;
+        }
+
+        println(&#34;\nAssistant &gt; $response\n&#34;)
+    }
+}
+</code></pre>
+<h2 is-upgraded>실행 확인</h2>
+<pre><code>[single] You &gt; /mode multi
+멀티 에이전트 모드로 전환되었습니다.
+  [멀티에이전트] 전문 에이전트 서버 시작 완료
+
+[multi] You &gt; src/main/kotlin/io/github/bwai/koog/codelab/example/UserService.kt 리뷰해줘
+  [오케스트레이터] 3개 전문 에이전트에 병렬 리뷰 요청 중...
+  [security] 리뷰 시작
+  [performance] 리뷰 시작
+  [design] 리뷰 시작
+  [security] 리뷰 완료
+  [performance] 리뷰 완료
+  [design] 리뷰 완료
+
+Assistant &gt; # 멀티에이전트 코드 리뷰 결과
+## 보안 리뷰 ...
+## 성능 리뷰 ...
+## 설계 리뷰 ...
+</code></pre>
+<p>막히면 <code>git checkout step/11</code> 으로 이동하세요.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="마무리" duration="8">
+        <p>축하합니다! Koog 프레임워크로 완전한 AI 코드 리뷰 에이전트를 완성했습니다.</p>
+<h2 is-upgraded>구현한 내용 정리</h2>
+<table>
+<tr><td colspan="1" rowspan="1"><p>단계</p>
+</td><td colspan="1" rowspan="1"><p>구현 내용</p>
+</td><td colspan="1" rowspan="1"><p>핵심 개념</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Step 2</p>
+</td><td colspan="1" rowspan="1"><p>AIAgent REPL</p>
+</td><td colspan="1" rowspan="1"><p>GoogleLLMClient, SingleLLMPromptExecutor</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Step 3</p>
+</td><td colspan="1" rowspan="1"><p>ReviewAgent 분리</p>
+</td><td colspan="1" rowspan="1"><p>시스템 프롬프트 설계</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Step 4</p>
+</td><td colspan="1" rowspan="1"><p>readFile 도구</p>
+</td><td colspan="1" rowspan="1"><p>@Tool, @LLMDescription</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Step 5</p>
+</td><td colspan="1" rowspan="1"><p>도구 3개 등록</p>
+</td><td colspan="1" rowspan="1"><p>ToolRegistry</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Step 6</p>
+</td><td colspan="1" rowspan="1"><p>이벤트 로깅</p>
+</td><td colspan="1" rowspan="1"><p>EventHandler, installFeatures</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Step 7</p>
+</td><td colspan="1" rowspan="1"><p>실습 리뷰</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Step 8</p>
+</td><td colspan="1" rowspan="1"><p>JSONL 히스토리</p>
+</td><td colspan="1" rowspan="1"><p>ConversationHistoryStorage</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Step 9</p>
+</td><td colspan="1" rowspan="1"><p>슬라이딩 윈도우 압축</p>
+</td><td colspan="1" rowspan="1"><p>prompt DSL, compressHistory</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Step 10</p>
+</td><td colspan="1" rowspan="1"><p>프로젝트 메모리</p>
+</td><td colspan="1" rowspan="1"><p>AgentMemoryStorage, KodeReviewMemoryStorage</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Step 11</p>
+</td><td colspan="1" rowspan="1"><p>A2A 멀티에이전트</p>
+</td><td colspan="1" rowspan="1"><p>OrchestratorAgent, 병렬 coroutine</p>
+</td></tr>
+</table>
+<h2 is-upgraded>CLI로 배포하기</h2>
+<p>지금까지 <code>./gradlew run</code>으로 실행했지만, 다른 사람에게 배포하려면 독립 실행 가능한 CLI 배포판을 만들어야 합니다.</p>
+<p>먼저 <code>build.gradle.kts</code>의 <code>application</code> 블록에 실행 파일 이름을 설정합니다.</p>
+<pre><code language="language-kotlin" class="language-kotlin">application {
+    mainClass.set(&#34;io.github.bwai.koog.codelab.MainKt&#34;)
+    applicationName = &#34;kode-review&#34;
+    applicationDefaultJvmArgs = listOf(&#34;--enable-native-access=ALL-UNNAMED&#34;)
+}
+</code></pre>
+<p><code>applicationName = "kode-review"</code>를 설정하면 생성되는 실행 스크립트 이름이 <code>kode-review</code>가 됩니다.</p>
+<p><strong>배포판 생성:</strong></p>
+<pre>./gradlew installDist
+</pre>
+<p><code>build/install/koog-codelab/</code> 디렉터리에 실행 스크립트와 라이브러리가 생성됩니다.</p>
+<pre>build/install/koog-codelab/
+├── bin/
+│   ├── koog-codelab        ← macOS/Linux 실행 스크립트
+│   └── koog-codelab.bat    ← Windows 실행 스크립트
+└── lib/
+    └── *.jar               ← 애플리케이션 + 의존성 JAR
+</pre>
+<p><strong>실행:</strong></p>
+<pre>API_KEY=your-api-key ./build/install/koog-codelab/bin/koog-codelab
+</pre>
+<p><strong>ZIP으로 패키징:</strong></p>
+<pre>./gradlew distZip
+</pre>
+<p><code>build/distributions/koog-codelab-1.0.0.zip</code> 파일이 생성됩니다. 이 파일을 다른 사람에게 전달하면, 압축을 풀고 <code>bin/koog-codelab</code>을 실행하면 됩니다.</p>
+<p><strong>터미널에서 </strong></p>
+<p><strong><code>kode-review</code></strong></p>
+<p><strong> 명령어로 실행하기:</strong></p>
+<p>심볼릭 링크를 생성하면 어디서든 <code>kode-review</code>로 바로 실행할 수 있습니다.</p>
+<pre>ln -sf $(pwd)/build/install/kode-review/bin/kode-review ~/.local/bin/kode-review
+</pre>
+<p>이제 터미널에서 바로 사용할 수 있습니다.</p>
+<pre>export API_KEY=your-api-key
+kode-review
+</pre>
+<pre><code>Koog Code Review Agent - BWAI 2026
+===================================
+명령어: /help, /clear, /memory add &lt;내용&gt;, /mode single|multi, /exit
+
+[single] You &gt; _
+</code></pre>
+<p>JDK 17 이상만 설치되어 있으면 어디서든 실행할 수 있습니다. <code>~/.local/bin</code>이 PATH에 없다면 <code>~/.zshrc</code> 또는 <code>~/.bashrc</code>에 <code>export PATH="$HOME/.local/bin:$PATH"</code>를 추가하세요.</p>
+<h2 is-upgraded>배운 핵심 개념</h2>
+<ul>
+<li><strong>에이전트 루프</strong>: LLM이 도구를 반복 호출하며 목표를 달성하는 ReAct 패턴</li>
+<li><strong>도구 설계</strong>: <code>@LLMDescription</code>이 명확할수록 에이전트가 올바른 도구를 선택</li>
+<li><strong>컨텍스트 관리</strong>: 슬라이딩 윈도우 + 요약으로 장기 대화를 효율적으로 처리</li>
+<li><strong>A2A 병렬화</strong>: 독립적인 전문 에이전트를 병렬로 실행해 응답 시간 단축</li>
+</ul>
+<h2 is-upgraded>다음 단계</h2>
+<p>Koog 생태계에서 더 탐구할 수 있는 주제들입니다.</p>
+<ul>
+<li><strong>GraphAIAgent</strong>: 복잡한 워크플로우를 노드/엣지 그래프로 표현</li>
+<li><strong>RAG (검색 증강 생성)</strong>: Koog의 <code>rag</code> 모듈로 코드베이스 벡터 검색</li>
+<li><strong>Spring Boot 통합</strong>: AI 에이전트를 REST API 서비스로 배포</li>
+<li><strong>MCP (Model Context Protocol)</strong>: 다양한 외부 도구를 표준 인터페이스로 연결</li>
+</ul>
+<h2 is-upgraded>피드백</h2>
+<p>코드랩 개선 사항이나 버그를 발견하셨나요? <a href="https://github.com/example/feedback" target="_blank">GitHub 이슈</a>로 알려주세요.</p>
+<p>감사합니다!</p>
+
+
+      </google-codelab-step>
+    
+  </google-codelab>
+
+  <script src="https://storage.googleapis.com/claat-public/native-shim.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/custom-elements.min.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/prettify.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/codelab-elements.js"></script>
+  <script src="//support.google.com/inapp/api.js"></script>
+
+</body>
+</html>

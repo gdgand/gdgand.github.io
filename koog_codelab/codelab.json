@@ -1,0 +1,26 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-49880327-14",
+  "updated": "2026-04-10T20:36:09+09:00",
+  "id": "koog-code-review-agent",
+  "duration": 107,
+  "title": "Koog으로 만드는 AI 코드 리뷰 에이전트",
+  "authors": "GDG Android Korea",
+  "summary": "Koog 프레임워크를 활용한 AI 코드 리뷰 에이전트 개발",
+  "source": "koog-code-review-agent.md",
+  "theme": "",
+  "status": [
+    "published"
+  ],
+  "category": [
+    "ai",
+    "kotlin"
+  ],
+  "tags": [
+    "web"
+  ],
+  "feedback": "https://github.com/example/feedback",
+  "url": "koog-code-review-agent"
+}
