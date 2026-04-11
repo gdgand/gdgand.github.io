@@ -226,7 +226,7 @@ fun main() = runBlocking {
 
         val agent = AIAgent(
             promptExecutor = executor,
-            llmModel = GoogleModels.Gemini2_0Flash,
+            llmModel = GoogleModels.Gemini2_5Flash,
             systemPrompt = &#34;당신은 도움이 되는 AI 어시스턴트입니다.&#34;
         )
         val response = agent.run(input)
@@ -267,7 +267,7 @@ class ReviewAgent(
     suspend fun chat(userMessage: String): String {
         val agent = AIAgent(
             promptExecutor = executor,
-            llmModel = GoogleModels.Gemini2_0Flash,
+            llmModel = GoogleModels.Gemini2_5Flash,
             systemPrompt = SYSTEM_PROMPT,
         )
         return agent.run(userMessage)
@@ -441,7 +441,7 @@ class ReviewAgent(
     suspend fun chat(userMessage: String): String {
         val agent = AIAgent(
             promptExecutor = executor,
-            llmModel = GoogleModels.Gemini2_0Flash,
+            llmModel = GoogleModels.Gemini2_5Flash,
             systemPrompt = SYSTEM_PROMPT,
             toolRegistry = registry,
         )
@@ -488,7 +488,7 @@ class ReviewAgent(
     suspend fun chat(userMessage: String): String {
         val agent = AIAgent(
             promptExecutor = executor,
-            llmModel = GoogleModels.Gemini2_0Flash,
+            llmModel = GoogleModels.Gemini2_5Flash,
             systemPrompt = SYSTEM_PROMPT,
             toolRegistry = registry,
         )
@@ -526,7 +526,7 @@ class ReviewAgent(
     suspend fun chat(userMessage: String): String {
         val agent = AIAgent(
             promptExecutor = executor,
-            llmModel = GoogleModels.Gemini2_0Flash,
+            llmModel = GoogleModels.Gemini2_5Flash,
             systemPrompt = SYSTEM_PROMPT,
             toolRegistry = registry,
             installFeatures = {
@@ -684,7 +684,7 @@ import ai.koog.rag.base.files.JVMFileSystemProvider
 import ai.koog.rag.base.files.createDirectory
 import ai.koog.rag.base.files.readText
 import ai.koog.rag.base.files.writeText
-import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlinx.serialization.json.Json
 import java.nio.file.Path
 import kotlin.time.Clock.System as KotlinClock
@@ -726,11 +726,11 @@ class JsonlConversationHistoryStorage(
         ensureDirectory()
         val existingContent = if (fs.exists(historyFile)) fs.readText(historyFile) else &#34;&#34;
         val userEntry = JsonlEntry(
-            timeStamp = Clock.System.now(),
+            timeStamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
             message = Message.User(userMessage, RequestMetaInfo.create(KotlinClock))
         )
         val assistantEntry = JsonlEntry(
-            timeStamp = Clock.System.now(),
+            timeStamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
             message = Message.Assistant(assistantMessage, ResponseMetaInfo.create(KotlinClock))
         )
         val newLines = listOf(userEntry, assistantEntry)
@@ -783,7 +783,7 @@ class ReviewAgent(
 
         val agent = AIAgent(
             promptExecutor = executor,
-            llmModel = GoogleModels.Gemini2_0Flash,
+            llmModel = GoogleModels.Gemini2_5Flash,
             systemPrompt = system,
             toolRegistry = registry,
             installFeatures = { /* EventHandler 동일 */ }
@@ -857,7 +857,7 @@ companion object {
 <h2 is-upgraded>ReviewAgent에서 압축 호출</h2>
 <p><code>ReviewAgent.kt</code>의 <code>chat</code> 함수 시작 부분에 압축 호출을 추가합니다.</p>
 <pre><code language="language-kotlin" class="language-kotlin">suspend fun chat(userMessage: String): String {
-    conversationHistoryStorage.compressHistory(executor, GoogleModels.Gemini2_0Flash)
+    conversationHistoryStorage.compressHistory(executor, GoogleModels.Gemini2_5Flash)
     val history = conversationHistoryStorage.getHistory()
     val summary = conversationHistoryStorage.getSummary()
     // ...
