@@ -32,7 +32,7 @@
         <p>이 코드랩에서는 JetBrains의 <strong>Koog</strong> 프레임워크를 사용해 실제로 동작하는 AI 코드 리뷰 에이전트를 단계적으로 만들어봅니다.</p>
 <h2 is-upgraded>무엇을 배우나요?</h2>
 <ul>
-<li><strong>Koog AIAgent</strong>: <code>GoogleLLMClient</code>, <code>SingleLLMPromptExecutor</code>, <code>AIAgent</code>의 구성 방법</li>
+<li><strong>Koog AIAgent</strong>: <code>GoogleLLMClient</code>, <code>MultiLLMPromptExecutor</code>, <code>AIAgent</code>의 구성 방법</li>
 <li><strong>시스템 프롬프트 설계</strong>: 에이전트의 역할과 행동을 정의하는 방법</li>
 <li><strong>도구(Tool) 개발</strong>: <code>@Tool</code>, <code>@LLMDescription</code> 어노테이션으로 에이전트가 사용할 함수 만들기</li>
 <li><strong>이벤트 핸들러</strong>: 에이전트 실행 흐름을 관찰하는 <code>EventHandler</code> 피처</li>
@@ -185,8 +185,8 @@ API_KEY=your-api-key-here
 <tr><td colspan="1" rowspan="1"><p><code>GoogleLLMClient</code></p>
 </td><td colspan="1" rowspan="1"><p>Google Gemini API와 통신하는 LLM 클라이언트</p>
 </td></tr>
-<tr><td colspan="1" rowspan="1"><p><code>SingleLLMPromptExecutor</code></p>
-</td><td colspan="1" rowspan="1"><p>단일 LLM에게 프롬프트를 실행하는 실행기</p>
+<tr><td colspan="1" rowspan="1"><p><code>MultiLLMPromptExecutor</code></p>
+</td><td colspan="1" rowspan="1"><p>LLM에게 프롬프트를 실행하는 실행기</p>
 </td></tr>
 <tr><td colspan="1" rowspan="1"><p><code>AIAgent</code></p>
 </td><td colspan="1" rowspan="1"><p>시스템 프롬프트, 모델, 도구를 조합한 에이전트</p>
@@ -203,7 +203,7 @@ API_KEY=your-api-key-here
 import ai.koog.agents.core.agent.AIAgent
 import ai.koog.prompt.executor.clients.google.GoogleLLMClient
 import ai.koog.prompt.executor.clients.google.GoogleModels
-import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
+import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 import kotlinx.coroutines.runBlocking
 
 fun main() = runBlocking {
@@ -212,7 +212,7 @@ fun main() = runBlocking {
         ?: error(&#34;API_KEY가 설정되지 않았습니다. 환경변수 API_KEY 또는 local.properties에 추가하세요.&#34;)
 
     val llmClient = GoogleLLMClient(apiKey = apiKey)
-    val executor = SingleLLMPromptExecutor(llmClient)
+    val executor = MultiLLMPromptExecutor(llmClient)
 
     println(&#34;Koog Code Review Agent - BWAI 2026&#34;)
     println(&#34;===================================&#34;)
@@ -259,10 +259,10 @@ Assistant &gt; 안녕하세요! 무엇을 도와드릴까요?
 
 import ai.koog.agents.core.agent.AIAgent
 import ai.koog.prompt.executor.clients.google.GoogleModels
-import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
+import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 
 class ReviewAgent(
-    private val executor: SingleLLMPromptExecutor,
+    private val executor: MultiLLMPromptExecutor,
 ) {
     suspend fun chat(userMessage: String): String {
         val agent = AIAgent(
@@ -301,7 +301,7 @@ class ReviewAgent(
 <pre><code language="language-kotlin" class="language-kotlin">package io.github.bwai.koog.codelab
 
 import ai.koog.prompt.executor.clients.google.GoogleLLMClient
-import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
+import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 import io.github.bwai.koog.codelab.agent.ReviewAgent
 import kotlinx.coroutines.runBlocking
 
@@ -311,7 +311,7 @@ fun main() = runBlocking {
         ?: error(&#34;API_KEY가 설정되지 않았습니다. 환경변수 API_KEY 또는 local.properties에 추가하세요.&#34;)
 
     val llmClient = GoogleLLMClient(apiKey = apiKey)
-    val executor = SingleLLMPromptExecutor(llmClient)
+    val executor = MultiLLMPromptExecutor(llmClient)
     val reviewAgent = ReviewAgent(executor)
 
     println(&#34;Koog Code Review Agent - BWAI 2026&#34;)
@@ -428,11 +428,11 @@ import ai.koog.agents.core.agent.AIAgent
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.agents.core.tools.reflect.tool
 import ai.koog.prompt.executor.clients.google.GoogleModels
-import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
+import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 import io.github.bwai.koog.codelab.tools.readFile
 
 class ReviewAgent(
-    private val executor: SingleLLMPromptExecutor,
+    private val executor: MultiLLMPromptExecutor,
 ) {
     private val registry = ToolRegistry {
         tool(::readFile)
@@ -477,7 +477,7 @@ import io.github.bwai.koog.codelab.tools.listFiles
 import io.github.bwai.koog.codelab.tools.readFile
 
 class ReviewAgent(
-    private val executor: SingleLLMPromptExecutor,
+    private val executor: MultiLLMPromptExecutor,
 ) {
     private val registry = ToolRegistry {
         tool(::readFile)
@@ -515,7 +515,7 @@ class ReviewAgent(
 <pre><code language="language-kotlin" class="language-kotlin">import ai.koog.agents.features.eventHandler.feature.EventHandler
 
 class ReviewAgent(
-    private val executor: SingleLLMPromptExecutor,
+    private val executor: MultiLLMPromptExecutor,
 ) {
     private val registry = ToolRegistry {
         tool(::readFile)
@@ -684,7 +684,7 @@ import ai.koog.rag.base.files.JVMFileSystemProvider
 import ai.koog.rag.base.files.createDirectory
 import ai.koog.rag.base.files.readText
 import ai.koog.rag.base.files.writeText
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.serialization.json.Json
 import java.nio.file.Path
 import kotlin.time.Clock.System as KotlinClock
@@ -765,7 +765,7 @@ import java.nio.file.Path
 import java.util.UUID
 
 class ReviewAgent(
-    private val executor: SingleLLMPromptExecutor,
+    private val executor: MultiLLMPromptExecutor,
     projectDir: String = &#34;default&#34;,
     sessionId: String = UUID.randomUUID().toString(),
 ) {
@@ -1242,7 +1242,7 @@ fun main() = runBlocking {
         ?: error(&#34;API_KEY가 설정되지 않았습니다. 환경변수 API_KEY 또는 local.properties에 추가하세요.&#34;)
 
     val llmClient = GoogleLLMClient(apiKey = apiKey)
-    val executor = SingleLLMPromptExecutor(llmClient)
+    val executor = MultiLLMPromptExecutor(llmClient)
     var reviewAgent = ReviewAgent(executor)
 
     var currentMode = ReviewMode.SINGLE
@@ -1343,7 +1343,7 @@ Assistant &gt; # 멀티에이전트 코드 리뷰 결과
 </td></tr>
 <tr><td colspan="1" rowspan="1"><p>Step 2</p>
 </td><td colspan="1" rowspan="1"><p>AIAgent REPL</p>
-</td><td colspan="1" rowspan="1"><p>GoogleLLMClient, SingleLLMPromptExecutor</p>
+</td><td colspan="1" rowspan="1"><p>GoogleLLMClient, MultiLLMPromptExecutor</p>
 </td></tr>
 <tr><td colspan="1" rowspan="1"><p>Step 3</p>
 </td><td colspan="1" rowspan="1"><p>ReviewAgent 분리</p>
